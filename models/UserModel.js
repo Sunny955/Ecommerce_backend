@@ -13,7 +13,7 @@ var userSchema = new mongoose.Schema({
     email:{
         type:String,
         required:true,
-        unique:true,
+        unique:true
     },
     mobile:{
         type:String,
@@ -22,7 +22,7 @@ var userSchema = new mongoose.Schema({
     },
     password:{
         type:String,
-        required:true,
+        required:true
     }
 });
 
