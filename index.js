@@ -2,6 +2,7 @@ const dotenv = require('dotenv').config();
 const express = require("express");
 const dbConnect = require("./config/dbConnect");
 const app = express();
+const cookieParser = require("cookie-parser");
 
 const authRouter = require("./routes/authRoutes");
 const { notFound, errorHandler } = require('./middlewares/errorHandler');
@@ -13,6 +14,7 @@ dbConnect();
 
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({extended : false}));
+app.use(cookieParser());
 
 
 app.use("/api/user",authRouter);

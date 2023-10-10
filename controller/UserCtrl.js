@@ -3,6 +3,7 @@ const User = require("../models/UserModel");
 const asyncHandler = require("express-async-handler");
 const mongoose = require('mongoose');
 const {isValidEmail,isValidName,isValidMobile} = require("../utils/reqValidations");
+const {generateRefreshToken} = require("../config/refreshToken")
 
 const validateMongoDbId = (id) => {
     return mongoose.Types.ObjectId.isValid(id);
@@ -54,6 +55,18 @@ const loginUser = asyncHandler(async (req, res) => {
     const findUser = await User.findOne({email:email});
 
     if (findUser && await findUser.isPasswordMatched(password)) {
+        const refreshToken = await generateRefreshToken(findUser?._id);
+        const updateuser = await User.findByIdAndUpdate(
+            findUser._id,
+            {
+              refreshToken: refreshToken,
+            },
+            { new: true }
+          );
+          res.cookie("refreshToken", refreshToken, {
+            httpOnly: true,
+            maxAge: 168 * 60 * 60 * 1000,
+          });
         res.status(200).json({
             success: true,
             user: {
@@ -136,7 +149,7 @@ const getaUser = asyncHandler(async (req, res) => {
  * @param {Object} res - The Express response object.
  */
 const deleteUser = asyncHandler(async (req, res, next) => {
-    const { id } = req.params;
+    const { _id } = req.user;
   
     // Ensure the provided ID is a valid MongoDB ObjectID.
     if (!validateMongoDbId(id)) {
@@ -144,7 +157,7 @@ const deleteUser = asyncHandler(async (req, res, next) => {
     }
   
     try {
-      const deletedUser = await User.findByIdAndDelete(id);
+      const deletedUser = await User.findByIdAndDelete(_id);
   
       if (!deletedUser) {
         return res.status(404).json({ message: 'User not found.' });
@@ -211,6 +224,85 @@ const deleteUser = asyncHandler(async (req, res, next) => {
                                error : error.message });
     }
 });
+
+/**
+ * Blocks a user in the database by admin.
+ *
+ * @param {Object} req - Express request object containing user ID in params.
+ * @param {Object} res - Express response object for sending responses.
+ */
+
+const blockUser = asyncHandler(async (req, res) => {
+    const { id } = req.params;
+  
+    if (!validateMongoDbId(id)) {
+      return res.status(400).json({ message: 'Invalid user ID.' }); // BAD_REQUEST
+    }
+  
+    try {
+      const blockusr = await User.findByIdAndUpdate(
+        id,
+        {
+          isBlocked: true,
+        },
+        {
+          new: true,
+        }
+      );
+  
+      if (!blockusr) {
+        return res.status(404).json({ message: 'User not found.' }); // NOT_FOUND
+      }
+  
+      res.status(200).json({ message: 'User successfully blocked.' }); // OK
+    } catch (error) {
+      console.error(`Failed to block user: ${error.message}`);
+      res.status(500).json({ message: 'Failed to block user due to an internal error.',
+                             error: error.message}); // INTERNAL_SERVER_ERROR
+    }
+  });
+
+  /**
+ * Unblocks a user in the database based on the provided ID.
+ *
+ * @param {Object} req - Express request object containing user ID in params.
+ * @param {Object} res - Express response object for sending responses.
+ */
+const unblockUser = asyncHandler(async (req, res) => {
+    const { id } = req.params;
+  
+    // Validate MongoDB ID
+    if (!validateMongoDbId(id)) {
+      return res.status(400).json({ message: 'Invalid user ID.' }); // BAD_REQUEST
+    }
+  
+    try {
+      // Attempt to find the user and update their block status to "false"
+      const unblock = await User.findByIdAndUpdate(
+        id,
+        {
+          isBlocked: false,
+        },
+        {
+          new: true,
+        }
+      );
+  
+      // Check if user was found and updated
+      if (!unblock) {
+        return res.status(404).json({ message: 'User not found.' }); // NOT_FOUND
+      }
+  
+      // User was successfully unblocked
+      res.status(200).json({ message: 'User successfully unblocked.' }); // OK
+    } catch (error) {
+      console.error(`Failed to unblock user: ${error.message}`);
+      res.status(500).json({ message: 'Failed to unblock user due to an internal error.',
+                             error : error.message   }); // INTERNAL_SERVER_ERROR
+    }
+  });
+  
+  
   
 
-module.exports = {createUser,loginUser,getAllUsers,getaUser,deleteUser,updateUser};
+module.exports = {createUser,loginUser,getAllUsers,getaUser,deleteUser,updateUser,blockUser,unblockUser};
