@@ -5,6 +5,7 @@ const app = express();
 const cookieParser = require("cookie-parser");
 
 const authRouter = require("./routes/authRoutes");
+const productRouter = require("./routes/productRoute");
 const { notFound, errorHandler } = require('./middlewares/errorHandler');
 
 const bodyParser = require('body-parser');
@@ -18,6 +19,7 @@ app.use(cookieParser());
 
 
 app.use("/api/user",authRouter);
+app.use("/api/product",productRouter);
 
 app.use(notFound);
 app.use(errorHandler);

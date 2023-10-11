@@ -2,13 +2,9 @@ const { generateToken } = require("../config/jwtToken");
 const User = require("../models/UserModel");
 const asyncHandler = require("express-async-handler");
 const mongoose = require('mongoose');
-const {isValidEmail,isValidName,isValidMobile} = require("../utils/reqValidations");
+const {isValidEmail,isValidName,isValidMobile,validateMongoDbId} = require("../utils/reqValidations");
 const {generateRefreshToken} = require("../config/refreshToken")
 const jwt = require("jsonwebtoken");
-
-const validateMongoDbId = (id) => {
-    return mongoose.Types.ObjectId.isValid(id);
-};
 
 /**
  * Create a new user in the database.
