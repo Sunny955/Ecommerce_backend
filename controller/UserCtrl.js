@@ -106,7 +106,7 @@ const logoutUser = asyncHandler(async (req, res) => {
   });
 
   // Respond with 'No Content' status
-  res.status(204).json({ message: "Logged out successfully" });
+  res.status(200).json({ message: "Logged out successfully" });
 });
 
 
