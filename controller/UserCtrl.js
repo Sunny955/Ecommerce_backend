@@ -4,6 +4,7 @@ const asyncHandler = require("express-async-handler");
 const mongoose = require('mongoose');
 const {isValidEmail,isValidName,isValidMobile} = require("../utils/reqValidations");
 const {generateRefreshToken} = require("../config/refreshToken")
+const jwt = require("jsonwebtoken");
 
 const validateMongoDbId = (id) => {
     return mongoose.Types.ObjectId.isValid(id);
@@ -83,6 +84,31 @@ const loginUser = asyncHandler(async (req, res) => {
         throw new Error('Invalid credentials!');
     }
 });
+
+// logout functionality
+
+const logoutUser = asyncHandler(async (req, res) => {
+  const { refreshToken } = req.cookies;
+
+  if (!refreshToken) {
+      throw new Error("No Refresh Token in Cookies");
+  }
+
+  // Update the refreshToken field for the matched user
+  await User.findOneAndUpdate({ refreshToken }, {
+      refreshToken: "",
+  });
+
+  // Clear the refreshToken cookie
+  res.clearCookie("refreshToken", {
+      httpOnly: true,
+      secure: true,
+  });
+
+  // Respond with 'No Content' status
+  res.status(204).json({ message: "Logged out successfully" });
+});
+
 
 // get all users
 const getAllUsers = asyncHandler(async (req, res) => {
@@ -173,6 +199,35 @@ const deleteUser = asyncHandler(async (req, res, next) => {
       res.status(500).json({ message: 'Internal server error.' });
     }
   });
+
+  //Handle referesh token
+  const handleRefreshToken = asyncHandler(async (req, res) => {
+    const { refreshToken } = req.cookies;
+
+    if (!refreshToken) {
+        return res.status(400).json({ message: "No refresh token in cookies" });
+    }
+
+    const user = await User.findOne({ refreshToken });
+    if (!user) {
+        return res.status(401).json({ message: "Refresh token is invalid" });
+    }
+
+    if (!process.env.JWT_SECRET) {
+        console.error('JWT_SECRET is missing in environment');
+        return res.status(500).json({ message: "Internal server error" });
+    }
+
+    jwt.verify(refreshToken, process.env.JWT_SECRET, (err, decoded) => {
+        if (err || user._id.toString() !== decoded.id) {
+            return res.status(401).json({ message: "Invalid refresh token" });
+        }
+
+        const accessToken = generateToken(user._id);
+        res.json({ accessToken });
+    });
+});
+
 
  /**
  * Update an existing user.
@@ -305,4 +360,4 @@ const unblockUser = asyncHandler(async (req, res) => {
   
   
 
-module.exports = {createUser,loginUser,getAllUsers,getaUser,deleteUser,updateUser,blockUser,unblockUser};
+module.exports = {createUser,loginUser,getAllUsers,getaUser,deleteUser,updateUser,blockUser,unblockUser,handleRefreshToken,logoutUser};
