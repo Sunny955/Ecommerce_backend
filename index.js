@@ -3,6 +3,7 @@ const express = require("express");
 const dbConnect = require("./config/dbConnect");
 const app = express();
 const cookieParser = require("cookie-parser");
+const morgan = require("morgan");
 
 const authRouter = require("./routes/authRoutes");
 const productRouter = require("./routes/productRoute");
@@ -13,6 +14,7 @@ const bodyParser = require('body-parser');
 const PORT = process.env.PORT || 3000;
 dbConnect();
 
+app.use(morgan("dev"));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({extended : false}));
 app.use(cookieParser());

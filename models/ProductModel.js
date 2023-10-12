@@ -7,6 +7,7 @@ var productSchema = new mongoose.Schema(
         type: String,
         required: [true, 'Title is required.'],
         trim: true,
+        minlength : [3,'Ttitle should have 3 or more than 3 characters'],
         maxlength: [100, 'Title cannot exceed 100 characters.'],
     },
     slug: {
@@ -18,6 +19,7 @@ var productSchema = new mongoose.Schema(
     description: {
         type: String,
         required: [true, 'Description is required.'],
+        minlength : [10,'Description should be 10 or greater than 10 characters'],
         maxlength: [2000, 'Description cannot exceed 2000 characters.'],
     },
     price: {
@@ -27,11 +29,13 @@ var productSchema = new mongoose.Schema(
     category: {
         type: String,
         required: [true, 'Category is required.'],
+        minlength:[1,'Category should have 1 or more than 1 character'],
         maxlength: [50, 'Category cannot exceed 50 characters.'],
     },
     brand: {
         type: String,
         required: [true, 'Brand is required.'],
+        minlength:[1,'Brand should have 1 or more than 1 character'],
         maxlength: [50, 'Brand cannot exceed 50 characters.'],
     },
     quantity: {

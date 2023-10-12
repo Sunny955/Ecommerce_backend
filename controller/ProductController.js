@@ -66,6 +66,88 @@ const getAllProducts = asyncHandler(async (req, res) => {
     res.status(200).json({ data: products, message: "Products retrieved successfully" });
 });
 
+/**
+ * @route PUT /products/update-product/:id
+ * @description Updates a specific product's details in the database based on the provided product ID. If the request body contains a title, the function also generates and updates the product's slug.
+ * @param {Object} req - Express request object. Expected to have the product ID in the params and any updated fields in the body.
+ * @param {Object} res - Express response object. Will return the updated product details or an appropriate error message.
+ * @throws {Error} Possible errors include invalid MongoDB ID format, product validation errors, or server/database errors.
+ * @returns {Object} JSON response with the updated product's details or an error message.
+ */
+const updateProduct = asyncHandler(async (req, res) => {
+    // Destructure id from request params
+    const { id } = req.params;
+  
+    // Validate MongoDB id format
+    if (!validateMongoDbId(id)) {
+      return res.status(400).json({ error: 'Invalid MongoDB ID format.' });
+    }
+  
+    try {
+      // Destructure title from request body and generate slug if present
+      const { title, ...otherFields } = req.body;
+      let updates = { ...otherFields };
+  
+      if (title) {
+        updates.title = title;
+        updates.slug = slugify(title);
+      }
+  
+      // Update product in the database
+      const updatedProduct = await Product.findOneAndUpdate({ _id: id }, updates, {
+        new: true,
+        runValidators: true,  // Ensure updated data adheres to schema validations
+      });
+  
+      // Check if the product exists
+      if (!updatedProduct) {
+        return res.status(404).json({ error: 'Product not found.' });
+      }
+  
+      res.json(updatedProduct);
+    } catch (error) {
+      console.error(`Error updating product with ID: ${id}. Error: ${error.message}`);
+      if (error.name === 'ValidationError') {
+        res.status(400).json({ error: error.message });
+      } else {
+        res.status(500).json({ error: 'Server error. Please try again later.' });
+      }
+    }
+  });
+
+  /**
+ * @route DELETE /products/:id
+ * @description Deletes a specific product from the database based on the provided product ID.
+ * @param {Object} req - Express request object. Expected to have the product ID in the params.
+ * @param {Object} res - Express response object. Will return the details of the deleted product or an appropriate error message.
+ * @throws {Error} Possible errors include invalid MongoDB ID format or server/database errors.
+ * @returns {Object} JSON response with the details of the deleted product or an error message.
+ */
+const deleteProduct = asyncHandler(async (req, res) => {
+    // Destructure id from request params
+    const { id } = req.params;
+  
+    // Validate MongoDB id format
+    if (!validateMongoDbId(id)) {
+      return res.status(400).json({ error: 'Invalid MongoDB ID format.' });
+    }
+  
+    try {
+      // Delete the product from the database
+      const deletedProduct = await Product.findOneAndDelete({ _id: id });
+  
+      // Check if the product was actually deleted
+      if (!deletedProduct) {
+        return res.status(404).json({ error: 'Product not found and thus not deleted.' });
+      }
+  
+      res.json({ success: true, data: deletedProduct });
+    } catch (error) {
+      console.error(`Error deleting product with ID: ${id}. Error: ${error.message}`);
+      res.status(500).json({ error: 'Server error. Please try again later.' });
+    }
+  });
+  
 
 
-module.exports = {createProduct,getaProduct,getAllProducts};
+module.exports = {createProduct,getaProduct,getAllProducts,updateProduct,deleteProduct};
