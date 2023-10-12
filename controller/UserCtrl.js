@@ -7,9 +7,15 @@ const {generateRefreshToken} = require("../config/refreshToken")
 const jwt = require("jsonwebtoken");
 
 /**
- * Create a new user in the database.
- * @param {Object} req - The Express request object.
- * @param {Object} res - The Express response object.
+ * @route POST /api/user/register
+ * @description Creates a new user in the system. The function expects the 'email' field to be unique.
+ * It will check if the user already exists based on the provided email, and if not, it will create 
+ * the user with the provided data. More comprehensive input validation should be applied, either 
+ * within this function or using a middleware.
+ * @param {Object} req - Express request object. Expected to contain user details with 'email' as a mandatory field.
+ * @param {Object} res - Express response object. Returns the newly created user details or an appropriate error message.
+ * @throws {Error} Possible errors include missing email field, user already exists, database errors, or other internal issues.
+ * @returns {Object} JSON response with the created user details or an error message.
  */
 const createUser = asyncHandler(async (req, res) => {
     // Destructure email from request body
@@ -39,7 +45,18 @@ const createUser = asyncHandler(async (req, res) => {
     }
 });
 
-
+/**
+ * @route POST /api/user/login
+ * @description Authenticates the user and logs them in. The function expects email and password 
+ * in the request body. Upon successful authentication, it generates a refresh token for the user 
+ * and updates their record in the database with this token. It then sends back the user details 
+ * along with an authentication token.
+ * @param {Object} req - Express request object. Expected to contain 'email' and 'password' in the body.
+ * @param {Object} res - Express response object. Returns the user details and authentication token 
+ * or an appropriate error message.
+ * @throws {Error} Possible errors include missing email or password, invalid MongoDB ID format, 
+ * or incorrect email/password combination.
+ */
 const loginUser = asyncHandler(async (req, res) => {
     const email = req.body.email;
     const password = req.body.password;
@@ -81,8 +98,16 @@ const loginUser = asyncHandler(async (req, res) => {
     }
 });
 
-// logout functionality
-
+/**
+ * @route GET /api/user/logout
+ * @description Logs out the user from the system by clearing the refreshToken from both the database and the client-side cookies. 
+ * The function expects a refreshToken stored in the client-side cookies, which will be used to identify the user in the system.
+ * The function will throw an error if the refreshToken is missing. After successfully logging out, a success message will be returned.
+ * @param {Object} req - Express request object. Expected to have the refreshToken in the cookies.
+ * @param {Object} res - Express response object. Clears the refreshToken cookie and returns a logout success message.
+ * @throws {Error} Possible errors include missing refreshToken in cookies.
+ * @returns {Object} JSON response with a success message or an error message.
+ */
 const logoutUser = asyncHandler(async (req, res) => {
   const { refreshToken } = req.cookies;
 
@@ -106,15 +131,17 @@ const logoutUser = asyncHandler(async (req, res) => {
 });
 
 
-// get all users
+/**
+ * @route GET /api/user/all-users
+ * @description Retrieves a list of users from the system, with optional query parameters to limit the number of results and skip a certain number of entries. By default, the function will retrieve 10 users starting from the first entry. The `limit` and `skip` query parameters can be used to modify this behavior. The response will contain a success flag, the count of retrieved users, and the list of users.
+ * @param {Object} req - Express request object. Optionally, may contain `limit` and `skip` in the query parameters.
+ * @param {Object} res - Express response object. Returns a list of users and related data or an appropriate error message.
+ * @throws {Error} Possible errors include any issues while querying the database or other internal issues.
+ * @returns {Object} JSON response with a success flag, count of retrieved users, and the list of users or an error message.
+ */
 const getAllUsers = asyncHandler(async (req, res) => {
     try {
-      const limit = parseInt(req.query.limit) || 10; // Default limit is 10
-      const skip = parseInt(req.query.skip) || 0; // Default skip is 0
-  
-      const users = await User.find()
-                            .limit(limit)
-                            .skip(skip);
+      const users = await req.advancedFilter;
   
       res.status(200).json({
         success: true,
@@ -127,11 +154,15 @@ const getAllUsers = asyncHandler(async (req, res) => {
     }
 });
 
-
 /**
- * Get a user from the database by ID.
- * @param {Object} req - The Express request object.
- * @param {Object} res - The Express response object.
+ * @route GET /api/user/:id
+ * @description Retrieves a specific user from the system based on the provided user ID in the route parameters.
+ * The function will first validate the format of the MongoDB ID, and if it's incorrect, a relevant error message is returned.
+ * If the user does not exist in the system, an appropriate "not found" message will be sent back to the client.
+ * @param {Object} req - Express request object. Expected to contain the user ID in the route parameters.
+ * @param {Object} res - Express response object. Returns the user's details if found, or an appropriate error message.
+ * @throws {Error} Possible errors include invalid MongoDB ID format, user not found, database errors, or other internal issues.
+ * @returns {Object} JSON response with a success flag, the user's details (if found), or an error message.
  */
 const getaUser = asyncHandler(async (req, res) => {
     const { id } = req.params;
@@ -166,9 +197,15 @@ const getaUser = asyncHandler(async (req, res) => {
 });
 
 /**
- * Delete a user from the database by ID.
- * @param {Object} req - The Express request object.
- * @param {Object} res - The Express response object.
+ * @route DELETE /api/user/delete-user
+ * @description Deletes a specific user from the system based on the provided user ID found in the authenticated user's data (from middleware, JWT, or sessions). 
+ * The function will first validate the MongoDB ID format, and if it's incorrect, a relevant error message is returned.
+ * If the user does not exist in the system, an appropriate "not found" message will be sent back to the client.
+ * @param {Object} req - Express request object. Expected to have user information populated by previous middleware, specifically the user ID in the user object.
+ * @param {Object} res - Express response object. Returns a success message and details of the deleted user if found, or an appropriate error message.
+ * @param {Function} next - Express next middleware function.
+ * @throws {Error} Possible errors include invalid MongoDB ID format, user not found, database errors, or other internal issues.
+ * @returns {Object} JSON response with a success message, details of the deleted user (if found), or an error message.
  */
 const deleteUser = asyncHandler(async (req, res, next) => {
     const { _id } = req.user;
@@ -196,7 +233,16 @@ const deleteUser = asyncHandler(async (req, res, next) => {
     }
   });
 
-  //Handle referesh token
+  /**
+ * @route GET /api/user/refresh
+ * @description Handles the refreshing of an access token using a refresh token stored in cookies. 
+ * The function expects the refresh token in the client-side cookies. If the refresh token is valid and matches a user in the system, 
+ * a new access token is generated and sent back to the client. Invalid or expired refresh tokens will return an appropriate error message.
+ * @param {Object} req - Express request object. Expected to have a refresh token in the cookies.
+ * @param {Object} res - Express response object. Returns a new access token if refresh token is valid, or an appropriate error message.
+ * @throws {Error} Possible errors include missing refresh token in cookies, invalid or expired refresh token, missing JWT_SECRET, or other internal issues.
+ * @returns {Object} JSON response with a new access token or an error message.
+ */
   const handleRefreshToken = asyncHandler(async (req, res) => {
     const { refreshToken } = req.cookies;
 
@@ -224,11 +270,16 @@ const deleteUser = asyncHandler(async (req, res, next) => {
     });
 });
 
-
- /**
- * Update an existing user.
- * @param {Object} req - The Express request object.
- * @param {Object} res - The Express response object.
+/**
+ * @route PUT /api/user/edit-user
+ * @description Updates a user's details in the system based on the authenticated user's ID and the provided update fields. 
+ * The function validates the user ID and the format of fields like the firstname, lastname, email, and mobile number.
+ * Only valid updates will be processed. If any of the fields have an invalid format, an error message will be generated.
+ * @param {Object} req - Express request object. Expected to have user information populated by previous middleware (specifically the user ID),
+ * and may contain fields (firstname, lastname, email, mobile) in the body for updates.
+ * @param {Object} res - Express response object. Returns the updated user details and a success message or an appropriate error message.
+ * @throws {Error} Possible errors include invalid user ID or field formats, user not found, database errors, or other internal issues.
+ * @returns {Object} JSON response with updated user details and a success message, or an error message.
  */
  const updateUser = asyncHandler(async (req, res) => {
     const { _id } = req.user;
@@ -277,12 +328,18 @@ const deleteUser = asyncHandler(async (req, res, next) => {
 });
 
 /**
- * Blocks a user in the database by admin.
- *
- * @param {Object} req - Express request object containing user ID in params.
- * @param {Object} res - Express response object for sending responses.
+ * @route PUT /api/user/block-user/:id
+ * @description Allows administrators to block a specific user in the system based on the provided user ID. 
+ * The user's `isBlocked` field will be set to `true`. The function will first validate the MongoDB ID format, 
+ * and if it's incorrect, a relevant error message is returned. If the user does not exist in the system, 
+ * an appropriate "not found" message will be sent back to the client.
+ * This route should be protected and only accessible by administrators.
+ * @param {Object} req - Express request object. Expected to contain the user ID in the route parameters.
+ * @param {Object} res - Express response object. Returns a success message if user is blocked successfully, 
+ * or an appropriate error message.
+ * @throws {Error} Possible errors include invalid MongoDB ID format, user not found, database errors, or other internal issues.
+ * @returns {Object} JSON response with a success message or an error message.
  */
-
 const blockUser = asyncHandler(async (req, res) => {
     const { id } = req.params;
   
@@ -314,11 +371,18 @@ const blockUser = asyncHandler(async (req, res) => {
   });
 
   /**
- * Unblocks a user in the database based on the provided ID.
- *
- * @param {Object} req - Express request object containing user ID in params.
- * @param {Object} res - Express response object for sending responses.
- */
+   * @route PUT /api/user/unblock-user/:id
+   * @description Allows administrators to unblock a specific user in the system based on the provided user ID. 
+   * The user's `isBlocked` field will be set to `false`. The function will first validate the MongoDB ID format, 
+   * and if it's incorrect, a relevant error message is returned. If the user does not exist in the system, 
+   * an appropriate "not found" message will be sent back to the client.
+   * This route should be protected and only accessible by administrators.
+   * @param {Object} req - Express request object. Expected to contain the user ID in the route parameters.
+   * @param {Object} res - Express response object. Returns a success message if user is unblocked successfully, 
+   * or an appropriate error message.
+   * @throws {Error} Possible errors include invalid MongoDB ID format, user not found, database errors, or other internal issues.
+   * @returns {Object} JSON response with a success message or an error message.
+   */
 const unblockUser = asyncHandler(async (req, res) => {
     const { id } = req.params;
   
@@ -352,7 +416,6 @@ const unblockUser = asyncHandler(async (req, res) => {
                              error : error.message   }); // INTERNAL_SERVER_ERROR
     }
   });
-  
   
   
 
