@@ -145,6 +145,7 @@ const getAllUsers = asyncHandler(async (req, res) => {
   
       res.status(200).json({
         success: true,
+        pagination: req.advancedFilter.pagination,
         count: users.length,
         data: users
       });
@@ -416,7 +417,47 @@ const unblockUser = asyncHandler(async (req, res) => {
                              error : error.message   }); // INTERNAL_SERVER_ERROR
     }
   });
+
+  /**
+ * @route PUT /api/user/update-password
+ * @description Updates the password of the authenticated user. If the user is not found or the provided password is invalid, an error message will be returned.
+ * This function requires the user's ID from the request user object and the new password from the request body.
+ * Upon successful update, a success message is sent in the response.
+ * @param {Object} req - Express request object containing the user ID and new password.
+ * @param {Object} res - Express response object. Returns a success message upon successful password update or an appropriate error message.
+ * @throws {Error} Possible errors include invalid user ID, user not found, or missing new password in the request body.
+ * @returns {Object} JSON response with a success message upon successful password update or an appropriate error message.
+ */
+  const updatePassword = asyncHandler(async (req, res, next) => {
+    const { _id } = req.user;
+    const { password } = req.body;
   
+    // Validate the MongoDB ID
+    if (!validateMongoDbId(_id)) {
+      return res.status(400).json({ success: false, message: "Invalid User ID" });
+    }
+  
+    // Fetch the user by their ID
+    const user = await User.findById(_id);
+  
+    // If no user found, send a 404 error
+    if (!user) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+  
+    // If a new password is provided, update it
+    if (password) {
+      user.password = password;
+      await user.save();
+  
+      // Ideally, don't send back the entire user object with the password, even if it's hashed.
+      // Instead, send a success message.
+      return res.status(200).json({ success: true, message: "Password updated successfully" });
+    }
+  
+    // If no new password is provided, notify the user.
+    return res.status(400).json({ success: false, message: "Please provide a new password" });
+  });
   
 
-module.exports = {createUser,loginUser,getAllUsers,getaUser,deleteUser,updateUser,blockUser,unblockUser,handleRefreshToken,logoutUser};
+module.exports = {createUser,loginUser,getAllUsers,getaUser,deleteUser,updateUser,blockUser,unblockUser,handleRefreshToken,logoutUser,updatePassword};
