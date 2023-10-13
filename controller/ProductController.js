@@ -70,7 +70,7 @@ const getAllProducts = asyncHandler(async (req, res) => {
         return res.status(404).json({ message: "No products available!" });
     }
 
-    res.status(200).json({success:true,count : products.length ,data: products ,message : "All products retrived successfully" });
+    res.status(200).json({success:true,pagination: req.advancedFilter.pagination,count : products.length ,data: products ,message : "All products retrived successfully" });
 });
 
 /**
