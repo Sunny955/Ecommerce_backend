@@ -1,10 +1,12 @@
 const { generateToken } = require("../config/jwtToken");
 const User = require("../models/UserModel");
 const asyncHandler = require("express-async-handler");
-const mongoose = require('mongoose');
 const {isValidEmail,isValidName,isValidMobile,validateMongoDbId} = require("../utils/reqValidations");
 const {generateRefreshToken} = require("../config/refreshToken")
 const jwt = require("jsonwebtoken");
+const {sendEmail} = require("../controller/EmailController");
+const crypto = require("crypto");
+const bcrypt = require("bcrypt");
 
 /**
  * @route POST /api/user/register
@@ -458,6 +460,124 @@ const unblockUser = asyncHandler(async (req, res) => {
     // If no new password is provided, notify the user.
     return res.status(400).json({ success: false, message: "Please provide a new password" });
   });
+
+  /**
+ * @route POST /api/user/forgot-password-token
+ * @description Generates a password reset token for a user and sends an email with a reset link.
+ * If the user is not found with the provided email, an error message will be returned.
+ * This function requires the user's email from the request body.
+ * Upon successful token generation and email sending, a success message is sent in the response.
+ * @param {Object} req - Express request object containing the user's email.
+ * @param {Object} res - Express response object. Returns a success message upon successful email sending or an appropriate error message.
+ * @throws {Error} Possible errors include user not found, issues generating the token, or problems sending the email.
+ * @returns {Object} JSON response with a success message upon successful email sending or an appropriate error message.
+ */
+  const forgotPasswordToken = asyncHandler(async (req, res) => {
+    const { email } = req.body;
+  
+    // 1. Check if the user exists for the provided email.
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(404).json({ message: "User not found with this email" });
+    }
+  
+    try {
+      // 2. Create a password reset token for the user.
+      const token = await user.createPasswordResetToken();
+  
+      // Save the token to the user's record. This assumes that the method
+      // createPasswordResetToken modifies the user instance.
+
+      await User.findOneAndUpdate(
+        { _id: user._id },
+        {
+          passwordResetToken: user.passwordResetToken,
+          passwordResetExpires: user.passwordResetExpires,
+        }
+      );
+  
+      // 3. Create the reset URL and structure the email content.
+      const resetURL = `
+        Hi,
+        Please follow this link to reset your password.
+        This link is valid for 10 minutes from now.
+        <a href='http://localhost:3000/api/user/reset-password/${token}'>Click Here</a>
+      `;
+  
+      const emailData = {
+        to: email,
+        subject: "Forgot Password Link",
+        text: "Hey User, follow the instructions in the email to reset your password.",
+        html: resetURL,
+      };
+  
+      // 4. Send the email with the reset link.
+      sendEmail(emailData);
+  
+      // Send a success response. It's better not to send the token in the response
+      // for security reasons. Instead, just inform the user that the email has been sent.
+      res.status(200).json({ message: "Reset password email sent.",token : token });
+  
+    } catch (error) {
+      console.error("Error in forgotPasswordToken:", error);
+      return res.status(500).json({ message: "Internal Server Error",
+                                    error });
+    }
+  });
+
+  /**
+ * @route PUT /api/user/reset-password/:token
+ * @description Resets the password of a user using the provided reset token. If the token is invalid or has expired, an error message will be returned.
+ * The function requires the new password from the request body and the reset token from the request params.
+ * Upon successful password reset, a success message is sent in the response.
+ * @param {Object} req - Express request object containing the reset token in params and new password in the body.
+ * @param {Object} res - Express response object. Returns a success message upon successful password reset or an appropriate error message.
+ * @throws {Error} Possible errors include invalid token, token expiration, or any errors during the reset process.
+ * @returns {Object} JSON response with a success message upon successful password reset or an appropriate error message.
+ */
+const resetPassword = asyncHandler(async (req, res) => {
+  const { password,confirmPassword } = req.body;
+  const { token } = req.params;
+
+  // 1. Check for blank fields.
+  if (!password || !confirmPassword) {
+      return res.status(400).json({ message: "Please fill in all fields." });
+  }
+  
+  // 2. Check if password and confirmPassword match.
+  if (password !== confirmPassword) {
+    return res.status(400).json({ message: "Passwords are not the same." });
+  }
+
+  // 3. Hash the provided token to match the hashed token stored in the database.
+  const hashedToken = crypto.createHash("sha256").update(token).digest("hex");
+ 
+  // 4. Find a user with the hashed token and check if the token hasn't expired.
+  const user = await User.findOne({
+      passwordResetToken: hashedToken,
+      passwordResetExpires: { $gt: Date.now() },
+  });
+
+  if (!user) {
+      return res.status(400).json({ message: "Token expired or invalid. Please request a new one." });
+  }
+  // 5. Check if user added old password or new one
+  const isSamePassword = await bcrypt.compare(password, user.password);
+  if (isSamePassword) {
+      return res.status(400).json({ message: "You can't use your old password. Please go with a new one." });
+  }
+
+  // 6. Update the user's password and clear the password reset fields.
+  user.password = password;
+  user.passwordResetToken = undefined;
+  user.passwordResetExpires = undefined;
+
+  // Save the updated user data.
+  await user.save();
+
+  // Return a success response.
+  res.status(200).json({ message: "Password reset successfully." });
+});
   
 
-module.exports = {createUser,loginUser,getAllUsers,getaUser,deleteUser,updateUser,blockUser,unblockUser,handleRefreshToken,logoutUser,updatePassword};
+module.exports = {createUser,loginUser,getAllUsers,getaUser,deleteUser,updateUser,blockUser,unblockUser,handleRefreshToken,logoutUser,updatePassword,forgotPasswordToken,resetPassword};
