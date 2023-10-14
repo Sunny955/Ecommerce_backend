@@ -7,6 +7,7 @@ const morgan = require("morgan");
 
 const authRouter = require("./routes/authRoutes");
 const productRouter = require("./routes/productRoute");
+const blogRouter = require("./routes/blogRoutes");
 const { notFound, errorHandler } = require('./middlewares/errorHandler');
 
 const bodyParser = require('body-parser');
@@ -22,6 +23,7 @@ app.use(cookieParser());
 
 app.use("/api/user",authRouter);
 app.use("/api/product",productRouter);
+app.use("/api/blog",blogRouter);
 
 app.use(notFound);
 app.use(errorHandler);
