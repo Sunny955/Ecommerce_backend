@@ -1,6 +1,6 @@
 const express = require("express");
 const router = express.Router();
-const {createBlog, updateBlog, getBlog, getAllBlogs, deleteBlog, likeBlog} = require("../controller/BlogController");
+const {createBlog, updateBlog, getBlog, getAllBlogs, deleteBlog, likeBlog, dislikeBlog} = require("../controller/BlogController");
 const {advancedFiltering} = require("../middlewares/advanceFiltering");
 const {authMiddleware,isAdmin} = require("../middlewares/authMiddleware");
 const Blog = require("../models/BlogModel");
@@ -12,5 +12,6 @@ router.get('/get-blog/:id',authMiddleware,isAdmin,getBlog);
 router.get('/all-blogs',authMiddleware,isAdmin,advancedFiltering(Blog),getAllBlogs);
 router.delete('/delete-blog/:id',authMiddleware,isAdmin,deleteBlog);
 router.put('/like-blog',authMiddleware,likeBlog);
+router.put('/dislike-blog',authMiddleware,dislikeBlog);
 
 module.exports = router;

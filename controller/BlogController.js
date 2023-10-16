@@ -220,7 +220,7 @@ const getBlog = asyncHandler(async (req, res) => {
     // Extract logged-in user's ID
     const loginUserId = req?.user?._id;
     if (!loginUserId) {
-      return res.status(400).json({ message: "User not authenticated." });
+      return res.status(400).json({ message: "User not logged in." });
     }
   
     try {
@@ -240,17 +240,19 @@ const getBlog = asyncHandler(async (req, res) => {
       if (hasDisliked) {
         update = {
           $pull: { dislikes: loginUserId },
-          isDisliked: false,  // Assuming you want to set this flag for the entire blog post, not per user
+          isDisliked: false,
+          $push : hasLiked ? {} : { likes: loginUserId },
+          isLiked : true
         };
       } else if (hasLiked) {
         update = {
           $pull: { likes: loginUserId },
-          isLiked: false, // Similarly, assuming this flag is for the entire blog post
+          isLiked: false, 
         };
       } else {
         update = {
           $push: { likes: loginUserId },
-          isLiked: true, // And again for this flag
+          isLiked: true, 
         };
       }
   
@@ -259,11 +261,89 @@ const getBlog = asyncHandler(async (req, res) => {
       res.status(200).json({success:true, data:updatedBlog});
   
     } catch (error) {
-      console.error("Error while liking/unliking the blog:", error);
+      console.error("Error while liking the blog:", error);
       
       // Send a generic server error for database errors
-      res.status(500).json({ message: "Server error while liking/unliking the blog." });
+      res.status(500).json({ message: "Server error while liking the blog." });
     }
   });
 
-  module.exports = {createBlog,updateBlog,getBlog,getAllBlogs,deleteBlog,likeBlog};
+/**
+ * @route POST /api/blogs/dislike-blog
+ * @description Allows a user to dislike a blog. If the user has previously liked the blog, the like is removed. If the user has already disliked the blog, the dislike is removed (undislike).
+ * @access Private - Access limited to authenticated users.
+ * 
+ * @param {Object} req - Express request object. Requires 'blogId' in the request body and user details (assuming populated in 'user' from previous middleware).
+ * @param {Object} res - Express response object. Returns the updated blog on successful dislike/undislike or an appropriate error message.
+ * 
+ * @throws {Error} Possible errors can include invalid MongoDB ID, database errors, or a blog not being found.
+ * @returns {Object} JSON response with the updated blog entry (disliked/undisliked) or an appropriate error message.
+ */
+  const dislikeBlog = asyncHandler(async (req, res) => {
+    // Extracting blog ID from request body
+    const { blogId } = req.body;
+
+    // Validate MongoDB ID
+    if (!validateMongoDbId(blogId)) {
+        return res.status(400).send({ message: "Invalid blog ID provided." });
+    }
+
+    // Get the logged-in user's ID
+    const loginUserId = req?.user?._id;
+    if (!loginUserId) {
+        return res.status(401).send({ message: "User not logged in." });
+    }
+
+    try {
+      // Fetch the targeted blog
+    const blog = await Blog.findById(blogId);
+    if (!blog) {
+        return res.status(404).send({ message: "Blog not found." });
+    }
+
+    // Check if the user has already liked the blog
+    const hasLiked = blog.likes.includes(loginUserId.toString());
+    
+    // Check if the user has already disliked the blog
+    const hasDisliked = blog.dislikes.includes(loginUserId.toString());
+
+    // Initialize update object
+    let update = {};
+
+    if (hasLiked) {
+        // If the user has previously liked, remove the like
+        update = {
+            $pull: { likes: loginUserId },
+            isLiked: false,
+            $push: hasDisliked ? {} : { dislikes: loginUserId },
+            isDisliked: hasDisliked ? false : true
+        };
+    } else if (hasDisliked) {
+        // If the user has previously disliked, remove the dislike
+        update = {
+            $pull: { dislikes: loginUserId },
+            isDisliked: false,
+        };
+    } else {
+        // If the user hasn't previously liked or disliked, add a dislike
+        update = {
+            $push: { dislikes: loginUserId },
+            isDisliked: true,
+        };
+    }
+
+    // Apply the update to the blog
+    const updatedBlog = await Blog.findByIdAndUpdate(blogId, update, { new: true });
+
+    // Return the updated blog data
+    res.status(200).json({success: true, data: updatedBlog});
+    } catch (error) {
+      console.error("Error while disliking the blog:", error);
+      
+      // Send a generic server error for database errors
+      res.status(500).json({ message: "Server error while disliking the blog." });
+    }
+});
+  
+
+  module.exports = {createBlog,updateBlog,getBlog,getAllBlogs,deleteBlog,likeBlog,dislikeBlog};

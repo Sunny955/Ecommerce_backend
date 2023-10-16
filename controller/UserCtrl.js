@@ -173,7 +173,6 @@ const getaUser = asyncHandler(async (req, res) => {
     // Validate MongoDB ID
     if (!validateMongoDbId(id)) {
         return res.status(400).json({
-            success: false,
             message: 'Provided ID is not a valid MongoDB ID.'
         });
     }
@@ -182,7 +181,6 @@ const getaUser = asyncHandler(async (req, res) => {
         const user = await User.findById(id);
         if (!user) {
             return res.status(404).json({
-                success: false,
                 message: 'User not found with the provided ID.'
             });
         }
@@ -193,7 +191,6 @@ const getaUser = asyncHandler(async (req, res) => {
         });
     } catch (error) {
         res.status(500).json({
-            success: false,
             message: 'Error retrieving user: ' + error.message
         });
     }
@@ -226,8 +223,9 @@ const deleteUser = asyncHandler(async (req, res, next) => {
       }
   
       res.status(200).json({
-        message: 'User successfully deleted.',
-        user: deletedUser
+        success : true,
+        data: deletedUser,
+        message: 'User successfully deleted.'
       });
     } catch (error) {
       // Ideally, we should send the error to a logger and provide a generic error message to the client.
@@ -576,7 +574,7 @@ const resetPassword = asyncHandler(async (req, res) => {
   await user.save();
 
   // Return a success response.
-  res.status(200).json({ message: "Password reset successfully." });
+  res.status(200).json({ success:true, message: "Password reset successfully." });
 });
   
 
