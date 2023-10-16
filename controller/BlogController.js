@@ -110,8 +110,8 @@ const getBlog = asyncHandler(async (req, res) => {
           new: true, // Return the updated object
         }
       )
-      .populate("likes")
-      .populate("dislikes");
+      .populate("likes","-__v -refreshToken -passwordResetExpires -passwordResetToken -password")
+      .populate("dislikes","-__v -refreshToken -passwordResetExpires -passwordResetToken -password");
   
       // Check if the blog was found
       if (!blog) {
