@@ -160,4 +160,110 @@ const getBlog = asyncHandler(async (req, res) => {
       }
   });
 
-  module.exports = {createBlog,updateBlog,getBlog,getAllBlogs};
+  /**
+ * @route DELETE /api/blogs/delete-blog/:id
+ * @description Deletes a specific blog entry by ID.
+ * @access Private/Protected - Access limited to authenticated users with proper roles (such as admins or the author of the blog).
+ * 
+ * @param {Object} req - Express request object. Requires blog ID in the params.
+ * @param {Object} res - Express response object. Returns the deleted blog on successful deletion or an appropriate error message.
+ * 
+ * @throws {Error} Possible errors can include invalid MongoDB ID, database errors, or a blog not being found.
+ * @returns {Object} JSON response with the deleted blog entry or an appropriate error message.
+ */
+  const deleteBlog = asyncHandler(async (req, res) => {
+    const { id } = req.params;
+  
+    // Validate the MongoDB ID
+    if (!validateMongoDbId(id)) {
+      return res.status(400).json({ message: "Invalid blog ID provided." });
+    }
+  
+    try {
+      // Attempt to find and delete the blog
+      const deletedBlog = await Blog.findByIdAndDelete(id);
+  
+      // Check if the blog was found and deleted
+      if (!deletedBlog) {
+        return res.status(404).json({ message: "Blog not found." });
+      }
+  
+      // Return the deleted blog entry
+      res.status(200).json({ success: true, data: deletedBlog , message : "Deleted successfully"});
+    } catch (error) {
+      console.error("Error deleting the blog:", error);
+      
+      // Send a generic server error for database errors
+      res.status(500).json({ message: "Server error while deleting the blog." });
+    }
+  });
+
+  /**
+ * @route POST /api/blogs/like
+ * @description Allows a user to like a blog. If the user has previously disliked the blog, the dislike is removed. If the user has already liked the blog, the like is removed (unlike).
+ * @access Private - Access limited to authenticated users.
+ * 
+ * @param {Object} req - Express request object. Requires 'blogId' in the request body and user details (assuming populated in 'user' from previous middleware).
+ * @param {Object} res - Express response object. Returns the updated blog on successful like/unlike or an appropriate error message.
+ * 
+ * @throws {Error} Possible errors can include invalid MongoDB ID, database errors, or a blog not being found.
+ * @returns {Object} JSON response with the updated blog entry (liked/unliked) or an appropriate error message.
+ */
+  const likeBlog = asyncHandler(async (req, res) => {
+    const { blogId } = req.body;
+  
+    // Validate the MongoDB ID
+    if (!validateMongoDbId(blogId)) {
+      return res.status(400).json({ message: "Invalid blog ID provided." });
+    }
+  
+    // Extract logged-in user's ID
+    const loginUserId = req?.user?._id;
+    if (!loginUserId) {
+      return res.status(400).json({ message: "User not authenticated." });
+    }
+  
+    try {
+      // Fetch the blog to check existing like/dislike status
+      const blog = await Blog.findById(blogId);
+      if (!blog) {
+        return res.status(404).json({ message: "Blog not found." });
+      }
+  
+      // Check if the user has already liked or disliked the blog
+      const hasLiked = blog.likes.includes(loginUserId);
+      const hasDisliked = blog.dislikes.includes(loginUserId);
+  
+      let update = {};
+  
+      // Update logic based on the like/dislike status
+      if (hasDisliked) {
+        update = {
+          $pull: { dislikes: loginUserId },
+          isDisliked: false,  // Assuming you want to set this flag for the entire blog post, not per user
+        };
+      } else if (hasLiked) {
+        update = {
+          $pull: { likes: loginUserId },
+          isLiked: false, // Similarly, assuming this flag is for the entire blog post
+        };
+      } else {
+        update = {
+          $push: { likes: loginUserId },
+          isLiked: true, // And again for this flag
+        };
+      }
+  
+      // Apply the update
+      const updatedBlog = await Blog.findByIdAndUpdate(blogId, update, { new: true });
+      res.status(200).json({success:true, data:updatedBlog});
+  
+    } catch (error) {
+      console.error("Error while liking/unliking the blog:", error);
+      
+      // Send a generic server error for database errors
+      res.status(500).json({ message: "Server error while liking/unliking the blog." });
+    }
+  });
+
+  module.exports = {createBlog,updateBlog,getBlog,getAllBlogs,deleteBlog,likeBlog};
