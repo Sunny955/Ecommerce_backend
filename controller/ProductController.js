@@ -3,6 +3,8 @@ const User = require("../models/UserModel");
 const asyncHandler = require("express-async-handler");
 const slugify = require("slugify");
 const { validateMongoDbId } = require("../utils/reqValidations");
+const keyGetAllProducts = "/api/product/get-all-products";
+const { cache } = require("../middlewares/cacheMiddleware");
 
 /**
  * @route POST api/product/create
@@ -28,12 +30,18 @@ const createProduct = asyncHandler(async (req, res) => {
   // Create the product
   const newProduct = await Product.create(req.body);
 
-  // Return the newly created product
-  res.status(201).json({
-    success: true,
-    data: newProduct,
-    message: "Product created successfully",
-  });
+  if (newProduct) {
+    // Invalidate cache after creating a new product
+    cache.del(keyGetAllProducts);
+
+    // Return the newly created product
+    return res.status(201).json({
+      success: true,
+      data: newProduct,
+      message: "Product created successfully",
+    });
+  }
+  res.status(500).json({ success: false, message: "Internal server error" });
 });
 
 /**
@@ -132,6 +140,10 @@ const updateProduct = asyncHandler(async (req, res) => {
       return res.status(404).json({ error: "Product not found." });
     }
 
+    // Invalidate cache after updating a product
+    cache.del(keyGetAllProducts);
+    cache.del(`/api/product/get-a-product/${id}`);
+
     res.status(200).json({
       success: true,
       data: updatedProduct,
@@ -142,9 +154,11 @@ const updateProduct = asyncHandler(async (req, res) => {
       `Error updating product with ID: ${id}. Error: ${error.message}`
     );
     if (error.name === "ValidationError") {
-      res.status(400).json({ error: error.message });
+      res.status(400).json({ success: false, message: error.message });
     } else {
-      res.status(500).json({ error: "Server error. Please try again later." });
+      res
+        .status(500)
+        .json({ success: false, message: "Internal server error" });
     }
   }
 });
@@ -176,6 +190,10 @@ const deleteProduct = asyncHandler(async (req, res) => {
         .status(404)
         .json({ error: "Product not found and thus not deleted." });
     }
+
+    // Invalidate cache after deleting a product
+    cache.del(keyGetAllProducts);
+    cache.del(`/api/product/get-a-product/${id}`);
 
     res.status(200).json({
       success: true,

@@ -12,6 +12,7 @@ const jwt = require("jsonwebtoken");
 const { sendEmail } = require("../controller/EmailController");
 const crypto = require("crypto");
 const bcrypt = require("bcrypt");
+const { cache } = require("../middlewares/cacheMiddleware");
 
 /**
  * @route POST /api/user/register
@@ -43,7 +44,12 @@ const createUser = asyncHandler(async (req, res) => {
 
     // Create a new user
     const newUser = await User.create({ email, ...otherData });
-    res.status(201).json(newUser);
+
+    // Invalidate the cache for all users
+    const allUsersKey = "/api/user/all-users";
+    cache.del(allUsersKey);
+
+    res.status(201).json({ success: true, data: newUser });
   } catch (error) {
     // Ideally, we should send the error to a logger and provide a generic error message to the client.
     console.error(`Failed to create user: ${error.message}`);
@@ -233,6 +239,10 @@ const deleteUser = asyncHandler(async (req, res, next) => {
       return res.status(404).json({ message: "User not found." });
     }
 
+    // Invalidate the cache for the specific user
+    const userKey = `/api/user/${_id}`;
+    cache.del(userKey);
+
     res.status(200).json({
       success: true,
       data: deletedUser,
@@ -330,6 +340,10 @@ const updateUser = asyncHandler(async (req, res) => {
       return res.status(404).json({ message: "User not found." });
     }
 
+    // Invalidate the cache for the specific user
+    const userKey = `/api/user/${_id}`;
+    cache.del(userKey);
+
     res.status(200).json({
       message: "User updated successfully.",
       user: updatedUser,
@@ -374,15 +388,21 @@ const blockUser = asyncHandler(async (req, res) => {
     );
 
     if (!blockusr) {
-      return res.status(404).json({ message: "User not found." }); // NOT_FOUND
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found." }); // NOT_FOUND
     }
+
+    // Invalidate the cache for the specific user
+    const userKey = `/api/user/${id}`;
+    cache.del(userKey);
 
     res.status(200).json({ message: "User successfully blocked." }); // OK
   } catch (error) {
     console.error(`Failed to block user: ${error.message}`);
     res.status(500).json({
+      success: false,
       message: "Failed to block user due to an internal error.",
-      error: error.message,
     }); // INTERNAL_SERVER_ERROR
   }
 });
@@ -422,16 +442,22 @@ const unblockUser = asyncHandler(async (req, res) => {
 
     // Check if user was found and updated
     if (!unblock) {
-      return res.status(404).json({ message: "User not found." }); // NOT_FOUND
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found." }); // NOT_FOUND
     }
+
+    // Invalidate the cache for the specific user
+    const userKey = `/api/user/${id}`;
+    cache.del(userKey);
 
     // User was successfully unblocked
     res.status(200).json({ message: "User successfully unblocked." }); // OK
   } catch (error) {
     console.error(`Failed to unblock user: ${error.message}`);
     res.status(500).json({
+      success: false,
       message: "Failed to unblock user due to an internal error.",
-      error: error.message,
     }); // INTERNAL_SERVER_ERROR
   }
 });
@@ -467,6 +493,10 @@ const updatePassword = asyncHandler(async (req, res, next) => {
   if (password) {
     user.password = password;
     await user.save();
+
+    // Invalidate the cache for the specific user
+    const userKey = `/api/user/${_id}`;
+    cache.del(userKey);
 
     // Ideally, don't send back the entire user object with the password, even if it's hashed.
     // Instead, send a success message.
@@ -541,7 +571,9 @@ const forgotPasswordToken = asyncHandler(async (req, res) => {
       .json({ message: "Reset password email sent.", token: token });
   } catch (error) {
     console.error("Error in forgotPasswordToken:", error);
-    return res.status(500).json({ message: "Internal Server Error", error });
+    return res
+      .status(500)
+      .json({ success: false, message: "Internal Server Error" });
   }
 });
 
