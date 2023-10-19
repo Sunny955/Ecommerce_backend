@@ -10,6 +10,7 @@ const productRouter = require("./routes/productRoute");
 const blogRouter = require("./routes/blogRoutes");
 const blogCatRouter = require("./routes/blogCatRoute");
 const productCatRouter = require("./routes/prodCatRoute");
+const brandRouter = require("./routes/brandRoute");
 const { notFound, errorHandler } = require('./middlewares/errorHandler');
 
 const bodyParser = require('body-parser');
@@ -28,6 +29,7 @@ app.use("/api/product",productRouter);
 app.use("/api/blog",blogRouter);
 app.use("/api/blog-cat",blogCatRouter);
 app.use("/api/product-cat",productCatRouter);
+app.use("/api/brand",brandRouter);
 
 app.use(notFound);
 app.use(errorHandler);

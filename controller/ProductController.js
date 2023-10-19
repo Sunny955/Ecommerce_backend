@@ -1,31 +1,39 @@
 const Product = require("../models/ProductModel");
+const User = require("../models/UserModel");
 const asyncHandler = require("express-async-handler");
 const slugify = require("slugify");
-const {validateMongoDbId} = require("../utils/reqValidations");
+const { validateMongoDbId } = require("../utils/reqValidations");
 
 /**
- * @route POST /api/product/create-product
- * @description Create a new product in the database. The product's title is used to generate a slug.
- *              Ensure the title exists before attempting to create a product.
- *              Return a 201 status code upon successful creation.
- *              The response contains the newly created product's data.
- * @returns {Object} JSON response with created product data and a success message.
+ * @route POST api/product/create
+ * @description Create a new product in the database. The title of the product is mandatory and
+ * it must be non-empty. The function also generates a slug for the product based on its title.
+ * @param {Object} req - Express request object. Expected to have the product details in the body.
+ * @param {Object} res - Express response object. Will return the details of the newly created
+ * product or an appropriate error message.
+ * @throws {Error} Possible errors include validation failures (like missing title) or
+ * server/database errors.
+ * @returns {Object} JSON response with the newly created product's details or an error message.
  */
 const createProduct = asyncHandler(async (req, res) => {
-    // Validation - Ensuring title exists and is not an empty string
-    const { title } = req.body;
-    if (!title || title.trim() === "") {
-        return res.status(400).json({ message: "Product title is required" });
-    }
+  // Validation - Ensuring title exists and is not an empty string
+  const { title } = req.body;
+  if (!title || title.trim() === "") {
+    return res.status(400).json({ message: "Product title is required" });
+  }
 
-    // Create slug from title
-    req.body.slug = slugify(title);
+  // Create slug from title
+  req.body.slug = slugify(title);
 
-    // Create the product
-    const newProduct = await Product.create(req.body);
+  // Create the product
+  const newProduct = await Product.create(req.body);
 
-    // Return the newly created product
-    res.status(201).json({ success: true,data: newProduct, message: "Product created successfully" });
+  // Return the newly created product
+  res.status(201).json({
+    success: true,
+    data: newProduct,
+    message: "Product created successfully",
+  });
 });
 
 /**
@@ -39,19 +47,22 @@ const createProduct = asyncHandler(async (req, res) => {
  * @returns {Object} JSON response with the product's details or an error message.
  */
 const getaProduct = asyncHandler(async (req, res) => {
-    const { id } = req.params;
+  const { id } = req.params;
 
-    if (!validateMongoDbId(id)) {
-        return res.status(400).json({ message: "Invalid product ID format" });
-    }
+  if (!validateMongoDbId(id)) {
+    return res.status(400).json({ message: "Invalid product ID format" });
+  }
 
-    const product = await Product.findById(id);
+  const product = await Product.findById(id).populate(
+    "ratings.postedby",
+    "-__v -refreshToken -passwordResetExpires -passwordResetToken -password -cart -wishlist -createdAt -updatedAt"
+  );
 
-    if (!product) {
-        return res.status(404).json({ message: "Product not found" });
-    }
+  if (!product) {
+    return res.status(404).json({ message: "Product not found" });
+  }
 
-    res.status(200).json({success: true,data: product});
+  res.status(200).json({ success: true, data: product });
 });
 
 /**
@@ -64,13 +75,19 @@ const getaProduct = asyncHandler(async (req, res) => {
  * @returns {Object} JSON response with a list of products and a success message, or an error message.
  */
 const getAllProducts = asyncHandler(async (req, res) => {
-    const products = await req.advancedFilter;
-    
-    if (!products || products.length === 0) {
-        return res.status(404).json({ message: "No products available!" });
-    }
+  const products = await req.advancedFilter;
 
-    res.status(200).json({success:true,pagination: req.advancedFilter.pagination,count : products.length ,data: products ,message : "All products retrived successfully" });
+  if (!products || products.length === 0) {
+    return res.status(404).json({ message: "No products available!" });
+  }
+
+  res.status(200).json({
+    success: true,
+    pagination: req.advancedFilter.pagination,
+    count: products.length,
+    data: products,
+    message: "All products retrived successfully",
+  });
 });
 
 /**
@@ -82,47 +99,57 @@ const getAllProducts = asyncHandler(async (req, res) => {
  * @returns {Object} JSON response with the updated product's details or an error message.
  */
 const updateProduct = asyncHandler(async (req, res) => {
-    // Destructure id from request params
-    const { id } = req.params;
-  
-    // Validate MongoDB id format
-    if (!validateMongoDbId(id)) {
-      return res.status(400).json({ error: 'Invalid MongoDB ID format.' });
-    }
-  
-    try {
-      // Destructure title from request body and generate slug if present
-      const { title, ...otherFields } = req.body;
-      let updates = { ...otherFields };
-  
-      if (title) {
-        updates.title = title;
-        updates.slug = slugify(title);
-      }
-  
-      // Update product in the database
-      const updatedProduct = await Product.findOneAndUpdate({ _id: id }, updates, {
-        new: true,
-        runValidators: true,  // Ensure updated data adheres to schema validations
-      });
-  
-      // Check if the product exists
-      if (!updatedProduct) {
-        return res.status(404).json({ error: 'Product not found.' });
-      }
-  
-      res.status(200).json({success: true, data : updatedProduct, message: "Updated successfully"});
-    } catch (error) {
-      console.error(`Error updating product with ID: ${id}. Error: ${error.message}`);
-      if (error.name === 'ValidationError') {
-        res.status(400).json({ error: error.message });
-      } else {
-        res.status(500).json({ error: 'Server error. Please try again later.' });
-      }
-    }
-  });
+  // Destructure id from request params
+  const { id } = req.params;
 
-  /**
+  // Validate MongoDB id format
+  if (!validateMongoDbId(id)) {
+    return res.status(400).json({ error: "Invalid MongoDB ID format." });
+  }
+
+  try {
+    // Destructure title from request body and generate slug if present
+    const { title, ...otherFields } = req.body;
+    let updates = { ...otherFields };
+
+    if (title) {
+      updates.title = title;
+      updates.slug = slugify(title);
+    }
+
+    // Update product in the database
+    const updatedProduct = await Product.findOneAndUpdate(
+      { _id: id },
+      updates,
+      {
+        new: true,
+        runValidators: true, // Ensure updated data adheres to schema validations
+      }
+    );
+
+    // Check if the product exists
+    if (!updatedProduct) {
+      return res.status(404).json({ error: "Product not found." });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: updatedProduct,
+      message: "Updated successfully",
+    });
+  } catch (error) {
+    console.error(
+      `Error updating product with ID: ${id}. Error: ${error.message}`
+    );
+    if (error.name === "ValidationError") {
+      res.status(400).json({ error: error.message });
+    } else {
+      res.status(500).json({ error: "Server error. Please try again later." });
+    }
+  }
+});
+
+/**
  * @route DELETE api/product/delete-product/:id
  * @description Administrator can delete a specific product from the database based on the provided product ID.
  * @param {Object} req - Express request object. Expected to have the product ID in the params.
@@ -131,30 +158,233 @@ const updateProduct = asyncHandler(async (req, res) => {
  * @returns {Object} JSON response with the details of the deleted product or an error message.
  */
 const deleteProduct = asyncHandler(async (req, res) => {
-    // Destructure id from request params
-    const { id } = req.params;
-  
-    // Validate MongoDB id format
-    if (!validateMongoDbId(id)) {
-      return res.status(400).json({ error: 'Invalid MongoDB ID format.' });
-    }
-  
-    try {
-      // Delete the product from the database
-      const deletedProduct = await Product.findOneAndDelete({ _id: id });
-  
-      // Check if the product was actually deleted
-      if (!deletedProduct) {
-        return res.status(404).json({ error: 'Product not found and thus not deleted.' });
-      }
-  
-      res.status(200).json({ success: true, data: deletedProduct , message : "Deleted successfully"});
-    } catch (error) {
-      console.error(`Error deleting product with ID: ${id}. Error: ${error.message}`);
-      res.status(500).json({ error: 'Server error. Please try again later.' });
-    }
-  });
-  
+  // Destructure id from request params
+  const { id } = req.params;
 
+  // Validate MongoDB id format
+  if (!validateMongoDbId(id)) {
+    return res.status(400).json({ error: "Invalid MongoDB ID format." });
+  }
 
-module.exports = {createProduct,getaProduct,getAllProducts,updateProduct,deleteProduct};
+  try {
+    // Delete the product from the database
+    const deletedProduct = await Product.findOneAndDelete({ _id: id });
+
+    // Check if the product was actually deleted
+    if (!deletedProduct) {
+      return res
+        .status(404)
+        .json({ error: "Product not found and thus not deleted." });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: deletedProduct,
+      message: "Deleted successfully",
+    });
+  } catch (error) {
+    console.error(
+      `Error deleting product with ID: ${id}. Error: ${error.message}`
+    );
+    res.status(500).json({ error: "Server error. Please try again later." });
+  }
+});
+
+/**
+ * @route PUT api/product/wishlist
+ * @description Add or remove a product to/from a user's wishlist based on its presence in the list.
+ * If present, the product will be removed, otherwise, it will be added.
+ * @param {Object} req - Express request object. Expected to have the user ID from the authentication process
+ * and the product ID in the body.
+ * @param {Object} res - Express response object. Will return the updated wishlist details or an appropriate error message.
+ * @throws {Error} Possible errors include invalid user or product IDs, or server/database errors.
+ * @returns {Object} JSON response with the updated user's wishlist or an error message.
+ */
+const addToWishlist = asyncHandler(async (req, res) => {
+  // Destructure user ID and product ID from the request
+  const { _id } = req.user;
+  const { prodId } = req.body;
+
+  try {
+    // Find the user by their ID
+    const user = await User.findById(_id);
+
+    // Check if product is already in the user's wishlist
+    const alreadyAdded = user.wishlist.find((id) => id.toString() === prodId);
+
+    let updateAction, message;
+
+    // If product is already in wishlist, remove it. Otherwise, add it.
+    if (alreadyAdded) {
+      updateAction = { $pull: { wishlist: prodId } };
+      message = "Product removed from wishlist";
+    } else {
+      updateAction = { $push: { wishlist: prodId } };
+      message = "Product added to wishlist";
+    }
+
+    // Update user's wishlist and return the updated user
+    const updatedUser = await User.findByIdAndUpdate(_id, updateAction, {
+      new: true,
+    });
+
+    // Return a success response with the updated user and message
+    res.json({
+      user: updatedUser,
+      message,
+    });
+  } catch (error) {
+    // Log the error for debugging purposes (optional)
+    console.error(`Error in adding product to wishlist: ${error.message}`);
+
+    // Send a generic error response
+    res
+      .status(500)
+      .send({ message: "Internal Server Error", error: error.message });
+  }
+});
+
+/**
+ * @route PUT api/product/rating
+ * @description Rate a product or update an existing rating for a product.
+ * If the user has already rated the product, their rating will be updated;
+ * otherwise, a new rating will be added to the product.
+ * @param {Object} req - Express request object. Expected to have the user ID from authentication,
+ * star rating, product ID, and optional comment in the body.
+ * @param {Object} res - Express response object. Will return the details of the updated product
+ * or an appropriate error message.
+ * @throws {Error} Possible errors include invalid product ID, or server/database errors.
+ * @returns {Object} JSON response with the updated product's details or an error message.
+ */
+const rating = asyncHandler(async (req, res) => {
+  // Destructure user ID, star rating, product ID, and comment from request body
+  const { _id } = req.user;
+  const { star, prodId, comment } = req.body;
+
+  // Validation for star
+  if (star < 1 || star > 5) {
+    return res
+      .status(400)
+      .json({ message: "Star rating should be between 1 and 5" });
+  }
+
+  // Validation for comment
+  const commentWords = comment.split(/\s+/); // Split the comment by whitespace to count words
+
+  if (commentWords.length === 0 || commentWords.length > 5000) {
+    return res
+      .status(400)
+      .json({ message: "Comment should be between 1 and 5000 words" });
+  }
+
+  try {
+    const product = await Product.findById(prodId);
+
+    if (!product) {
+      return res.status(404).json({ message: "Product not found" });
+    }
+
+    // Check if the user has already rated the product
+    let alreadyRated = product.ratings.find(
+      (rating) => rating.postedby.toString() === _id.toString()
+    );
+
+    if (alreadyRated) {
+      // Update the existing rating
+      await Product.updateOne(
+        {
+          ratings: { $elemMatch: alreadyRated },
+        },
+        {
+          $set: { "ratings.$.star": star, "ratings.$.comment": comment },
+        }
+      );
+    } else {
+      // Add a new rating to the product
+      await Product.findByIdAndUpdate(prodId, {
+        $push: {
+          ratings: {
+            star,
+            comment,
+            postedby: _id,
+          },
+        },
+      });
+    }
+
+    // Return a success response
+    res.status(200).json({
+      success: true,
+      message: alreadyRated
+        ? "Rating updated successfully"
+        : "Rating added successfully",
+    });
+  } catch (error) {
+    // Handle the error
+    console.error(`Error in rating product: ${error.message}`);
+    res
+      .status(500)
+      .send({ message: "Internal Server Error", error: error.message });
+  }
+});
+
+/**
+ * @route GET api/product/rating/:prodId
+ * @description Calculate and update the average rating for a given product.
+ * The average rating is determined based on all ratings for the product.
+ * @param {Object} req - Express request object. Expected to have the product ID in the params.
+ * @param {Object} res - Express response object. Will return the product with the updated
+ * average rating or an appropriate error message.
+ * @throws {Error} Possible errors include invalid product ID, or server/database errors.
+ * @returns {Object} JSON response with the product's updated details or an error message.
+ */
+const updateAverageRating = asyncHandler(async (req, res) => {
+  const { prodId } = req.params;
+
+  try {
+    // Retrieve the product and its ratings
+    const product = await Product.findById(prodId);
+
+    if (!product) {
+      return res.status(404).json({ message: "Product not found" });
+    }
+
+    // Calculate the total number of ratings
+    const totalRatings = product.ratings.length;
+
+    // Calculate the sum of all ratings
+    const ratingSum = product.ratings
+      .map((item) => item.star)
+      .reduce((prev, curr) => prev + curr, 0);
+
+    // Calculate the actual average rating (rounded to nearest integer)
+    // const averageRating = Math.round(ratingSum / totalRatings);
+    const averageRating = Math.round((ratingSum * 10) / totalRatings) / 10;
+
+    // Update the product's average rating
+    const updatedProduct = await Product.findByIdAndUpdate(
+      prodId,
+      { averagerating: averageRating },
+      { new: true }
+    );
+
+    // Return the updated product
+    res.status(200).json({ success: true, data: updatedProduct });
+  } catch (error) {
+    console.error(`Error in updating average rating: ${error.message}`);
+    res
+      .status(500)
+      .send({ message: "Internal Server Error", error: error.message });
+  }
+});
+
+module.exports = {
+  createProduct,
+  getaProduct,
+  getAllProducts,
+  updateProduct,
+  deleteProduct,
+  addToWishlist,
+  rating,
+  updateAverageRating,
+};

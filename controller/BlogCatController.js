@@ -63,7 +63,7 @@ const updateCategory = asyncHandler(async (req, res) => {
     res.status(200).json({ success: true, data: updatedCategory });
   } catch (error) {
     // General error handling
-    res.status(500).json({success: false, message: "Error updating category", error: error.message });
+    res.status(500).json({success: false, message: "Error updating category" });
   }
 });
 
@@ -94,7 +94,7 @@ const deleteCategory = asyncHandler(async (req, res) => {
     res.status(200).json({ success: true, message: "Category deleted successfully" });
   } catch (error) {
     // Handle unexpected errors
-    res.status(500).json({ success: false, message: "Error deleting category", error: error.message });
+    res.status(500).json({ success: false, message: "Error deleting category" });
   }
 });
 
@@ -125,7 +125,7 @@ const getCategory = asyncHandler(async (req, res) => {
     res.status(200).json({ success: true, data: category });
   } catch (error) {
     // Handle unexpected errors
-    res.status(500).json({ success: false, message: "Error retrieving category", error: error.message });
+    res.status(500).json({ success: false, message: "Error retrieving category" });
   }
 });
 
@@ -145,7 +145,7 @@ const getAllCategories = asyncHandler(async (req, res) => {
     res.status(200).json({ success: true, data: categories });
   } catch (error) {
     // Handle unexpected errors
-    res.status(500).json({ success: false, message: "Error retrieving categories", error: error.message });
+    res.status(500).json({ success: false, message: "Error retrieving categories" });
   }
 });
 
