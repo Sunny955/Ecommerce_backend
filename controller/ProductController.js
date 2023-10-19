@@ -205,6 +205,15 @@ const addToWishlist = asyncHandler(async (req, res) => {
   const { _id } = req.user;
   const { prodId } = req.body;
 
+  // Validate if the given prodId exists in the Product collection
+  const productExists = await Product.findById(prodId);
+
+  if (!productExists) {
+    return res
+      .status(400)
+      .json({ message: "Invalid product ID or product does not exist." });
+  }
+
   try {
     // Find the user by their ID
     const user = await User.findById(_id);
@@ -269,12 +278,16 @@ const rating = asyncHandler(async (req, res) => {
   }
 
   // Validation for comment
-  const commentWords = comment.split(/\s+/); // Split the comment by whitespace to count words
+  let commentWords = "";
 
-  if (commentWords.length === 0 || commentWords.length > 5000) {
+  if (comment) {
+    commentWords = comment.split(/\s+/); // Split the comment by whitespace to count words
+  }
+
+  if (commentWords.length > 5000) {
     return res
       .status(400)
-      .json({ message: "Comment should be between 1 and 5000 words" });
+      .json({ message: "Comment should be less than 5000 words" });
   }
 
   try {
