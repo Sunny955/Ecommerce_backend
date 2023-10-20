@@ -5,6 +5,7 @@ const slugify = require("slugify");
 const { validateMongoDbId } = require("../utils/reqValidations");
 const keyGetAllProducts = "/api/product/get-all-products";
 const { cache } = require("../middlewares/cacheMiddleware");
+const { cloudinaryUploadImg } = require("../utils/cloudinary");
 
 /**
  * @route POST api/product/create
@@ -409,6 +410,51 @@ const updateAverageRating = asyncHandler(async (req, res) => {
   }
 });
 
+/**
+ * @route PUT api/upload-image/:id
+ * @description Upload multiple images for a product and save URLs to the database.
+ * @param {Object} req - Express request object, expects product ID in params and images in files.
+ * @param {Object} res - Express response object. Returns updated product or an error message.
+ * @throws {Error} Possible errors include validation, database, or image upload errors.
+ * @returns {Object} JSON response with updated product or an error message.
+ */
+const uploadImages = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+
+  if (!validateMongoDbId(id)) {
+    return res
+      .status(400)
+      .json({ success: false, message: "Invalid MongoDB Id" });
+  }
+
+  try {
+    const uploader = (path) => cloudinaryUploadImg(path, "images");
+    const urls = await Promise.all(
+      req.files.map(async (file) => {
+        const { path } = file;
+        return await uploader(path);
+      })
+    );
+
+    const updatedProduct = await Product.findByIdAndUpdate(
+      id,
+      { images: urls },
+      {
+        new: true,
+        runValidators: true,
+      }
+    );
+
+    if (!updatedProduct) {
+      return res.status(404).json({ message: "Product not found" });
+    }
+
+    res.json(updatedProduct);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
 module.exports = {
   createProduct,
   getaProduct,
@@ -418,4 +464,5 @@ module.exports = {
   addToWishlist,
   rating,
   updateAverageRating,
+  uploadImages,
 };
