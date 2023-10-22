@@ -6,6 +6,7 @@ const { validateMongoDbId } = require("../utils/reqValidations");
 const keyGetAllProducts = "/api/product/get-all-products";
 const { cache } = require("../middlewares/cacheMiddleware");
 const { cloudinaryUploadImg } = require("../utils/cloudinary");
+const fs = require("fs");
 
 /**
  * @route POST api/product/create
@@ -421,24 +422,23 @@ const updateAverageRating = asyncHandler(async (req, res) => {
 const uploadImages = asyncHandler(async (req, res) => {
   const { id } = req.params;
 
-  if (!validateMongoDbId(id)) {
+  if (!req.files || req.files.length === 0) {
     return res
       .status(400)
-      .json({ success: false, message: "Invalid MongoDB Id" });
+      .json({ success: false, message: "No files uploaded" });
   }
 
   try {
-    const uploader = (path) => cloudinaryUploadImg(path, "images");
-    const urls = await Promise.all(
-      req.files.map(async (file) => {
-        const { path } = file;
-        return await uploader(path);
-      })
-    );
+    const urls = [];
+    for (const file of req.files) {
+      const uploadResult = await cloudinaryUploadImg(file.path);
+      urls.push(uploadResult.url);
+    }
 
+    // Update the specific product with the new image URLs
     const updatedProduct = await Product.findByIdAndUpdate(
       id,
-      { images: urls },
+      { $push: { images: urls } }, // This will add new URLs to the existing images array
       {
         new: true,
         runValidators: true,
@@ -446,12 +446,17 @@ const uploadImages = asyncHandler(async (req, res) => {
     );
 
     if (!updatedProduct) {
-      return res.status(404).json({ message: "Product not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "Product not found" });
     }
 
-    res.json(updatedProduct);
-  } catch (err) {
-    res.status(500).json({ message: err.message });
+    res.json({ success: true, product: updatedProduct });
+  } catch (error) {
+    console.error("Error in uploading images:", error.message);
+    res
+      .status(500)
+      .json({ success: false, message: "Failed to upload images" });
   }
 });
 

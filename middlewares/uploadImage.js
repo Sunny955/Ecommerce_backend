@@ -47,7 +47,12 @@ const productImgResize = async (req, res, next) => {
         .toFormat("jpeg")
         .jpeg({ quality: 90 })
         .toFile(destination);
-      fs.unlinkSync(file.path);
+
+      fs.unlink(file.path, (err) => {
+        if (err) {
+          console.error(`Error removing file: ${file.path}`);
+        }
+      });
     })
   );
   next();
@@ -70,7 +75,12 @@ const blogImgResize = async (req, res, next) => {
         .toFormat("jpeg")
         .jpeg({ quality: 90 })
         .toFile(destination);
-      fs.unlinkSync(file.path);
+
+      fs.unlink(file.path, (err) => {
+        if (err) {
+          console.error(`Error removing file: ${file.path}`);
+        }
+      });
     })
   );
   next();
