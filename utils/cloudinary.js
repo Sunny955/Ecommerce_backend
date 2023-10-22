@@ -1,36 +1,24 @@
 const cloudinary = require("cloudinary").v2;
 const fs = require("fs");
 
-// Configuring Cloudinary
+// Return "https" URLs by setting secure: true
 cloudinary.config({
-  cloud_name: process.env.CLOUD_NAME,
-  api_key: process.env.API_KEY,
-  api_secret: process.env.SECRET_KEY,
+  secure: true,
 });
-
-console.log(cloudinary.config());
 
 const cloudinaryUploadImg = async (filePath) => {
   try {
-    const result = await cloudinary.uploader.upload(filePath, {
-      resource_type: "auto",
-    });
-    fs.unlinkSync(filePath); // cleanup server
-    return {
-      url: result.secure_url,
-      asset_id: result.asset_id,
-      public_id: result.public_id,
-    };
+    // Upload the image
+    const result = await cloudinary.uploader.upload(filePath);
+    return result;
   } catch (error) {
-    throw new Error(`Failed to upload image. Error: ${error.message}`);
+    console.error(error);
   }
 };
 
 const cloudinaryDeleteImg = async (publicId) => {
   try {
-    const result = await cloudinary.uploader.destroy(publicId, {
-      resource_type: "auto",
-    });
+    const result = await cloudinary.uploader.destroy(publicId);
     return result;
   } catch (error) {
     throw new Error(`Failed to delete image. Error: ${error.message}`);

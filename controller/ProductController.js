@@ -429,16 +429,29 @@ const uploadImages = asyncHandler(async (req, res) => {
   }
 
   try {
-    const urls = [];
+    const images = [];
     for (const file of req.files) {
-      const uploadResult = await cloudinaryUploadImg(file.path);
-      urls.push(uploadResult.url);
+      if (fs.existsSync(file.path)) {
+        const uploadResult = await cloudinaryUploadImg(file.path);
+        images.push({
+          public_id: uploadResult.public_id,
+          url: uploadResult.secure_url,
+        });
+      } else {
+        console.log("Path doesn't exists!");
+        return res
+          .status(400)
+          .json({
+            success: false,
+            message: "Unable to find the path of the image",
+          });
+      }
     }
 
     // Update the specific product with the new image URLs
     const updatedProduct = await Product.findByIdAndUpdate(
       id,
-      { $push: { images: urls } }, // This will add new URLs to the existing images array
+      { $push: { images: { $each: images } } },
       {
         new: true,
         runValidators: true,
@@ -451,7 +464,7 @@ const uploadImages = asyncHandler(async (req, res) => {
         .json({ success: false, message: "Product not found" });
     }
 
-    res.json({ success: true, product: updatedProduct });
+    res.json({ success: true, data: updatedProduct });
   } catch (error) {
     console.error("Error in uploading images:", error.message);
     res
