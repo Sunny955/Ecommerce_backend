@@ -48,14 +48,35 @@ var blogSchema = new mongoose.Schema(
       default: "Admin",
     },
     image: {
-        type: String,
-        default: "https://www.google.com/url?sa=i&url=https%3A%2F%2Fwww.dreamstime.com%2Fphotos-images%2Fblog.html&psig=AOvVaw0L4P1E8GPXmVpwqO1A0j7Y&ust=1697378777710000&source=images&cd=vfe&ved=0CBEQjRxqFwoTCKjYlura9YEDFQAAAAAdAAAAABAZ",
+      type: String,
+      default:
+        "https://www.google.com/url?sa=i&url=https%3A%2F%2Fwww.dreamstime.com%2Fphotos-images%2Fblog.html&psig=AOvVaw0L4P1E8GPXmVpwqO1A0j7Y&ust=1697378777710000&source=images&cd=vfe&ved=0CBEQjRxqFwoTCKjYlura9YEDFQAAAAAdAAAAABAZ",
     },
-    images: [],
+    images: {
+      type: [
+        {
+          _id: false,
+          public_id: { type: String, index: true },
+          url: String,
+          upload_date: {
+            type: Date,
+            default: Date.now,
+            get: (date) => {
+              const day = String(date.getDate()).padStart(2, "0");
+              const month = String(date.getMonth() + 1).padStart(2, "0");
+              const year = date.getFullYear();
+              return `${year}-${month}-${day}`;
+            },
+          },
+        },
+      ],
+      validate: [arrayLimit, "Exceeds the limit of 7 images."],
+    },
   },
   {
     toJSON: {
       virtuals: true,
+      getters: true,
     },
     toObject: {
       virtuals: true,
@@ -63,6 +84,9 @@ var blogSchema = new mongoose.Schema(
     timestamps: true,
   }
 );
+function arrayLimit(val) {
+  return val.length <= 7;
+}
 
 //Export the model
 module.exports = mongoose.model("Blog", blogSchema);

@@ -47,12 +47,26 @@ var productSchema = new mongoose.Schema(
       default: 0,
       select: false,
     },
-    images: [
-      {
-        public_id: String,
-        url: String,
-      },
-    ],
+    images: {
+      type: [
+        {
+          _id: false,
+          public_id: { type: String, index: true },
+          url: String,
+          upload_date: {
+            type: Date,
+            default: Date.now,
+            get: (date) => {
+              const day = String(date.getDate()).padStart(2, "0");
+              const month = String(date.getMonth() + 1).padStart(2, "0");
+              const year = date.getFullYear();
+              return `${year}-${month}-${day}`;
+            },
+          },
+        },
+      ],
+      validate: [arrayLimit, "Exceeds the limit of 10 images."],
+    },
     color: [],
     tags: String,
     ratings: [
@@ -67,8 +81,17 @@ var productSchema = new mongoose.Schema(
       default: 0,
     },
   },
-  { timestamps: true }
+  {
+    timestamps: true,
+    toJSON: {
+      getters: true,
+    },
+  }
 );
+
+function arrayLimit(val) {
+  return val.length <= 10;
+}
 
 //Export the model
 module.exports = mongoose.model("Product", productSchema);

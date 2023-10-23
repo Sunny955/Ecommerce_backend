@@ -5,6 +5,8 @@ const asyncHandler = require("express-async-handler");
 const { cache } = require("../middlewares/cacheMiddleware");
 const BLOGS_KEY = "/all-blogs";
 const blogKey = (id) => `/get-blog/${id}`;
+const { cloudinaryUploadImg } = require("../utils/cloudinary");
+const fs = require("fs");
 
 /**
  * @route POST /api/blogs/create-blog
@@ -382,6 +384,69 @@ const dislikeBlog = asyncHandler(async (req, res) => {
   }
 });
 
+/**
+ * @route PUT api/upload-image/:id
+ * @description Upload multiple images for a product and save URLs to the database.
+ * @param {Object} req - Express request object, expects product ID in params and images in files.
+ * @param {Object} res - Express response object. Returns updated product or an error message.
+ * @throws {Error} Possible errors include validation, database, or image upload errors.
+ * @returns {Object} JSON response with updated product or an error message.
+ */
+const uploadImages = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+
+  if (!req.files || req.files.length === 0) {
+    return res
+      .status(400)
+      .json({ success: false, message: "No files uploaded" });
+  }
+
+  try {
+    const images = [];
+    for (const file of req.files) {
+      if (fs.existsSync(file.path)) {
+        const uploadResult = await cloudinaryUploadImg(file.path);
+        images.push({
+          public_id: uploadResult.public_id,
+          url: uploadResult.secure_url,
+        });
+      } else {
+        console.log("Path doesn't exists!");
+        return res.status(400).json({
+          success: false,
+          message: "Unable to find the path of the image",
+        });
+      }
+    }
+
+    // Update the specific product with the new image URLs
+    const updatedBlog = await Blog.findByIdAndUpdate(
+      id,
+      { $push: { images: { $each: images } } },
+      {
+        new: true,
+        runValidators: true,
+      }
+    );
+
+    if (!updatedBlog) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Blog not found" });
+    }
+
+    // Invalidate specific blog cache
+    cache.del(blogKey(id));
+
+    res.json({ success: true, data: updatedBlog });
+  } catch (error) {
+    console.error("Error in uploading images:", error.message);
+    res
+      .status(500)
+      .json({ success: false, message: "Failed to upload images" });
+  }
+});
+
 module.exports = {
   createBlog,
   updateBlog,
@@ -390,4 +455,5 @@ module.exports = {
   deleteBlog,
   likeBlog,
   dislikeBlog,
+  uploadImages,
 };

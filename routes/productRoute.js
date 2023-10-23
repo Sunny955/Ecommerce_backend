@@ -16,6 +16,7 @@ const { advancedFiltering } = require("../middlewares/advanceFiltering");
 const Product = require("../models/ProductModel");
 const { cacheMiddleware } = require("../middlewares/cacheMiddleware");
 const { uploadPhoto, productImgResize } = require("../middlewares/uploadImage");
+const { timeoutMiddleware } = require("../middlewares/timeoutMiddleware");
 
 router.post("/create-product", authMiddleware, isAdmin, createProduct);
 router.get(
@@ -45,6 +46,7 @@ router.get(
 );
 router.put(
   "/upload-image/:id",
+  timeoutMiddleware(25000),
   authMiddleware,
   isAdmin,
   uploadPhoto.array("images", 10),

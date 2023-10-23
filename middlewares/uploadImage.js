@@ -82,6 +82,7 @@ const blogImgResize = async (req, res, next) => {
           console.error(`Error removing file: ${file.path}`);
         }
       });
+      file.path = destination;
     })
   );
   next();

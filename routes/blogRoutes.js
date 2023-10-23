@@ -8,11 +8,14 @@ const {
   deleteBlog,
   likeBlog,
   dislikeBlog,
+  uploadImages,
 } = require("../controller/BlogController");
 const { advancedFiltering } = require("../middlewares/advanceFiltering");
 const { authMiddleware, isAdmin } = require("../middlewares/authMiddleware");
 const Blog = require("../models/BlogModel");
 const { cacheMiddleware } = require("../middlewares/cacheMiddleware");
+const { timeoutMiddleware } = require("../middlewares/timeoutMiddleware");
+const { uploadPhoto, blogImgResize } = require("../middlewares/uploadImage");
 
 router.post("/create-blog", authMiddleware, isAdmin, createBlog);
 router.put("/update-blog/:id", authMiddleware, isAdmin, updateBlog);
@@ -34,5 +37,14 @@ router.get(
 router.delete("/delete-blog/:id", authMiddleware, isAdmin, deleteBlog);
 router.put("/like-blog", authMiddleware, likeBlog);
 router.put("/dislike-blog", authMiddleware, dislikeBlog);
+router.put(
+  "/upload-image/:id",
+  timeoutMiddleware(25000),
+  authMiddleware,
+  isAdmin,
+  uploadPhoto.array("images", 2),
+  blogImgResize,
+  uploadImages
+);
 
 module.exports = router;

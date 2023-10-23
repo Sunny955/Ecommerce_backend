@@ -257,6 +257,10 @@ const addToWishlist = asyncHandler(async (req, res) => {
       new: true,
     });
 
+    // Invalidate cache after updating a product
+    cache.del(keyGetAllProducts);
+    cache.del(`/api/product/get-a-product/${id}`);
+
     // Return a success response with the updated user and message
     res.json({
       user: updatedUser,
@@ -344,6 +348,9 @@ const rating = asyncHandler(async (req, res) => {
         },
       });
     }
+    // Invalidate cache after updating a product
+    cache.del(keyGetAllProducts);
+    cache.del(`/api/product/get-a-product/${id}`);
 
     // Return a success response
     res.status(200).json({
@@ -362,7 +369,7 @@ const rating = asyncHandler(async (req, res) => {
 });
 
 /**
- * @route GET api/product/rating/:prodId
+ * @route PUT api/product/rating/:prodId
  * @description Calculate and update the average rating for a given product.
  * The average rating is determined based on all ratings for the product.
  * @param {Object} req - Express request object. Expected to have the product ID in the params.
@@ -400,6 +407,10 @@ const updateAverageRating = asyncHandler(async (req, res) => {
       { averagerating: averageRating },
       { new: true }
     );
+
+    // Invalidate cache after updating a product
+    cache.del(keyGetAllProducts);
+    cache.del(`/api/product/get-a-product/${id}`);
 
     // Return the updated product
     res.status(200).json({ success: true, data: updatedProduct });
@@ -439,12 +450,10 @@ const uploadImages = asyncHandler(async (req, res) => {
         });
       } else {
         console.log("Path doesn't exists!");
-        return res
-          .status(400)
-          .json({
-            success: false,
-            message: "Unable to find the path of the image",
-          });
+        return res.status(400).json({
+          success: false,
+          message: "Unable to find the path of the image",
+        });
       }
     }
 
@@ -463,6 +472,10 @@ const uploadImages = asyncHandler(async (req, res) => {
         .status(404)
         .json({ success: false, message: "Product not found" });
     }
+
+    // Invalidate cache after updating a product
+    cache.del(keyGetAllProducts);
+    cache.del(`/api/product/get-a-product/${id}`);
 
     res.json({ success: true, data: updatedProduct });
   } catch (error) {
