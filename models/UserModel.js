@@ -36,6 +36,7 @@ var userSchema = new mongoose.Schema(
         /^(?=.*\d)(?=.*[a-z])(?=.*[A-Z]).{8,15}$/,
         "Password should be 8-15 characters and should have numbers (0-9) and small and capital alphabets.",
       ],
+      select: false,
     },
     role: {
       type: String,

@@ -19,6 +19,7 @@ const { authMiddleware, isAdmin } = require("../middlewares/authMiddleware");
 const { advancedFiltering } = require("../middlewares/advanceFiltering");
 const User = require("../models/UserModel");
 const { cacheMiddleware } = require("../middlewares/cacheMiddleware");
+const { timeoutMiddleware } = require("../middlewares/timeoutMiddleware");
 
 router.post("/register", createUser);
 router.post("/forgot-password-token", forgotPasswordToken);
@@ -27,13 +28,22 @@ router.put("/update-password", authMiddleware, updatePassword);
 router.post("/login", loginUser);
 router.get(
   "/all-users",
+  timeoutMiddleware(20000),
+  authMiddleware,
   advancedFiltering(User),
   cacheMiddleware(3600),
   getAllUsers
 );
 router.get("/refresh", handleRefreshToken);
 router.get("/logout", logoutUser);
-router.get("/:id", authMiddleware, isAdmin, cacheMiddleware(3600), getaUser);
+router.get(
+  "/:id",
+  timeoutMiddleware(10000),
+  authMiddleware,
+  isAdmin,
+  cacheMiddleware(3600),
+  getaUser
+);
 router.delete("/delete-user", authMiddleware, deleteUser);
 router.put("/edit-user", authMiddleware, updateUser);
 router.put("/block-user/:id", authMiddleware, isAdmin, blockUser);

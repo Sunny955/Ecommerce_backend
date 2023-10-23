@@ -21,6 +21,7 @@ const { timeoutMiddleware } = require("../middlewares/timeoutMiddleware");
 router.post("/create-product", authMiddleware, isAdmin, createProduct);
 router.get(
   "/get-a-product/:id",
+  timeoutMiddleware(10000),
   authMiddleware,
   isAdmin,
   cacheMiddleware(3600),
@@ -28,18 +29,37 @@ router.get(
 );
 router.get(
   "/get-all-products",
+  timeoutMiddleware(20000),
   authMiddleware,
   isAdmin,
   advancedFiltering(Product),
   cacheMiddleware(3600),
   getAllProducts
 );
-router.put("/update-product/:id", authMiddleware, isAdmin, updateProduct);
-router.delete("/delete-product/:id", authMiddleware, isAdmin, deleteProduct);
-router.put("/wishlist", authMiddleware, addToWishlist);
-router.put("/rating", authMiddleware, rating);
+router.put(
+  "/update-product/:id",
+  timeoutMiddleware(15000),
+  authMiddleware,
+  isAdmin,
+  updateProduct
+);
+router.delete(
+  "/delete-product/:id",
+  timeoutMiddleware(15000),
+  authMiddleware,
+  isAdmin,
+  deleteProduct
+);
+router.put(
+  "/wishlist",
+  timeoutMiddleware(15000),
+  authMiddleware,
+  addToWishlist
+);
+router.put("/rating", timeoutMiddleware(15000), authMiddleware, rating);
 router.get(
   "/rating/:prodId",
+  timeoutMiddleware(10000),
   authMiddleware,
   cacheMiddleware(3600),
   updateAverageRating

@@ -410,6 +410,7 @@ const uploadImages = asyncHandler(async (req, res) => {
           public_id: uploadResult.public_id,
           url: uploadResult.secure_url,
         });
+        fs.unlinkSync(file.path);
       } else {
         console.log("Path doesn't exists!");
         return res.status(400).json({

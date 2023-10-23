@@ -21,6 +21,7 @@ router.post("/create-blog", authMiddleware, isAdmin, createBlog);
 router.put("/update-blog/:id", authMiddleware, isAdmin, updateBlog);
 router.get(
   "/get-blog/:id",
+  timeoutMiddleware(10000),
   authMiddleware,
   isAdmin,
   cacheMiddleware(3600),
