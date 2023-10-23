@@ -13,6 +13,9 @@ const {
   updatePassword,
   forgotPasswordToken,
   resetPassword,
+  loginAdmin,
+  getWishlist,
+  saveAddress,
 } = require("../controller/UserController");
 const router = express.Router();
 const { authMiddleware, isAdmin } = require("../middlewares/authMiddleware");
@@ -25,7 +28,8 @@ router.post("/register", createUser);
 router.post("/forgot-password-token", forgotPasswordToken);
 router.put("/reset-password/:token", resetPassword);
 router.put("/update-password", authMiddleware, updatePassword);
-router.post("/login", loginUser);
+router.post("/login", timeoutMiddleware(10000), loginUser);
+router.post("/admin-login", timeoutMiddleware(10000), loginAdmin);
 router.get(
   "/all-users",
   timeoutMiddleware(20000),
@@ -36,6 +40,8 @@ router.get(
 );
 router.get("/refresh", handleRefreshToken);
 router.get("/logout", logoutUser);
+router.get("/get-wishlist", authMiddleware, getWishlist);
+router.put("/save-address", authMiddleware, saveAddress);
 router.get(
   "/:id",
   timeoutMiddleware(10000),

@@ -13,6 +13,7 @@ const { sendEmail } = require("../controller/EmailController");
 const crypto = require("crypto");
 const bcrypt = require("bcrypt");
 const { cache } = require("../middlewares/cacheMiddleware");
+const { validateAddressWithMapQuest } = require("../utils/authAddress");
 
 /**
  * @route POST /api/user/register
@@ -77,8 +78,10 @@ const loginUser = asyncHandler(async (req, res) => {
 
   // Check for email and password presence
   if (!email || !password) {
-    res.status(400);
-    throw new Error("Both email and password are required for login.");
+    res.status(400).json({
+      success: false,
+      message: "Email and password required for login",
+    });
   }
   const findUser = await User.findOne({ email: email });
 
@@ -107,9 +110,75 @@ const loginUser = asyncHandler(async (req, res) => {
       },
     });
   } else {
-    res.status(401);
-    throw new Error("Invalid credentials!");
+    console.log("Error while login user");
+    res.status(401).json({ success: false, message: "Invalid credentials" });
   }
+});
+
+/**
+ * @route POST /api/user/admin-login
+ * @description Authenticates an admin user and provides them with a JWT token and a refresh token.
+ * The function checks the email and password from the request body against the database. If authenticated,
+ * the function will return some user details and a JWT token. If the user is not an admin or if authentication fails,
+ * it will throw an error.
+ * @param {Object} req - Express request object. Expected to have email and password in the body.
+ * @param {Object} res - Express response object. Sets a refreshToken cookie and returns user details and a JWT token.
+ * @throws {Error} Possible errors include non-admin users, invalid credentials, and other authentication failures.
+ * @returns {Object} JSON response with user details, a JWT token, or an error message.
+ */
+const loginAdmin = asyncHandler(async (req, res) => {
+  const { email, password } = req.body;
+
+  // 1. check email and password provided
+  if (!email || !password) {
+    res.status(400).json({
+      success: false,
+      message: "Email and password required for login",
+    });
+  }
+
+  // 2. Find the user based on the provided email
+  const user = await User.findOne({ email });
+
+  // 3. Check if user exists and if it's an admin
+  if (!user) {
+    return res
+      .status(401)
+      .json({ success: false, messsage: "Invalid credentials" });
+  }
+  if (user.role !== "admin" && user.role !== "Admin") {
+    return res
+      .status(402)
+      .json({ success: false, message: "Not authorized/admin" });
+  }
+
+  // 4. Verify the password
+  const isPasswordValid = await user.isPasswordMatched(password);
+  if (!isPasswordValid) {
+    throw new Error("Invalid Credentials");
+  }
+
+  // 5. Generate a new refresh token for the user
+  const refreshToken = await generateRefreshToken(user._id);
+
+  // 6. Update the user's refresh token in the database
+  await User.findByIdAndUpdate(user._id, { refreshToken }, { new: true });
+
+  // 7. Send the refresh token as a cookie
+  res.cookie("refreshToken", refreshToken, {
+    httpOnly: true,
+    maxAge: 72 * 60 * 60 * 1000, // 3 days
+  });
+
+  // 8. Respond with user details and a JWT token
+  res.json({
+    _id: user._id,
+    firstname: user.firstname,
+    lastname: user.lastname,
+    email: user.email,
+    mobile: user.mobile,
+    token: generateToken(user._id),
+  });
 });
 
 /**
@@ -637,6 +706,145 @@ const resetPassword = asyncHandler(async (req, res) => {
     .json({ success: true, message: "Password reset successfully." });
 });
 
+/**
+ * @route GET /api/user/wishlist
+ * @description Fetch the wishlist of the authenticated user.
+ * The function will try to find the user by the provided user ID and then populate the 'wishlist' field.
+ * @param {Object} req - Express request object. Expected to have user ID in req.user.
+ * @param {Object} res - Express response object. Returns the populated user's wishlist or an error message.
+ * @throws {Error} Possible errors include database issues or missing user ID.
+ * @returns {Object} JSON response with the user's wishlist or an error message.
+ */
+const getWishlist = asyncHandler(async (req, res) => {
+  const { _id } = req.user;
+
+  try {
+    // Fetch the user and populate the wishlist field
+    const userWithWishlist = await User.findById(_id).populate({
+      path: "wishlist",
+      select: "-ratings -createdAt -updatedAt -__v -quantity",
+    });
+
+    if (!userWithWishlist) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found.",
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: userWithWishlist,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "An error occurred while fetching the wishlist.",
+      error: error.message,
+    });
+  }
+});
+
+/**
+ * @route POST /api/user/saveAddress
+ * @description Saves or updates the user's address after verifying its existence using the MapQuest API.
+ * The request body should contain an address object with fields: lane1, lane2, city, pincode, district, and country.
+ * The function validates:
+ *   1. The MongoDB ID of the user making the request.
+ *   2. The presence of all required address fields in the request body.
+ *   3. The authenticity of the address using the MapQuest API.
+ * If any of the validations fail, the function will return an error message.
+ * If all validations pass, the address is saved/updated for the user in the database.
+ * @param {Object} req - Express request object. Contains user ID from JWT payload and address in request body.
+ * @param {Object} res - Express response object. Returns the updated user data with the saved address or an error message.
+ * @throws {Error} Possible errors include:
+ *   1. Invalid MongoDB ID.
+ *   2. Missing address fields.
+ *   3. Invalid address as per the MapQuest API.
+ *   4. Database errors during the update process.
+ * @returns {Object} JSON response with updated user data containing saved address or an error message.
+ */
+const saveAddress = asyncHandler(async (req, res) => {
+  const userId = req.user._id;
+
+  // Validate MongoDB ID
+  if (!validateMongoDbId(userId)) {
+    return res
+      .status(400)
+      .json({ success: false, message: "Invalid MongoDB ID" });
+  }
+
+  // Check if address is provided in request body
+  const address = req.body.address;
+  if (!address) {
+    return res.status(400).json({
+      success: false,
+      message: "Address is required.",
+    });
+  }
+
+  // Validate each address field
+  const requiredFields = [
+    "lane1",
+    "lane2",
+    "city",
+    "pincode",
+    "district",
+    "country",
+  ];
+  const missingFields = requiredFields.filter((field) => !address[field]);
+
+  if (missingFields.length > 0) {
+    return res.status(400).json({
+      success: false,
+      message: `The following address fields are missing: ${missingFields.join(
+        ", "
+      )}.`,
+    });
+  }
+
+  // Validate address using MapQuest API
+  const isValidAddress = await validateAddressWithMapQuest(address);
+  if (!isValidAddress) {
+    return res.status(400).json({
+      success: false,
+      message: "The provided address is not valid.",
+    });
+  }
+
+  try {
+    // Update the user's address
+    const updatedUser = await User.findByIdAndUpdate(
+      userId,
+      {
+        address: address,
+      },
+      {
+        new: true,
+        runValidators: true,
+      }
+    );
+
+    if (!updatedUser) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found.",
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: updatedUser,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "An error occurred while saving the address.",
+      error: error.message,
+    });
+  }
+});
+
 module.exports = {
   createUser,
   loginUser,
@@ -651,4 +859,7 @@ module.exports = {
   updatePassword,
   forgotPasswordToken,
   resetPassword,
+  loginAdmin,
+  getWishlist,
+  saveAddress,
 };

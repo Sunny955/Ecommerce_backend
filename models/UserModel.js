@@ -36,7 +36,6 @@ var userSchema = new mongoose.Schema(
         /^(?=.*\d)(?=.*[a-z])(?=.*[A-Z]).{8,15}$/,
         "Password should be 8-15 characters and should have numbers (0-9) and small and capital alphabets.",
       ],
-      select: false,
     },
     role: {
       type: String,
@@ -50,7 +49,47 @@ var userSchema = new mongoose.Schema(
       type: Array,
       default: [],
     },
-    address: [{ type: mongoose.Schema.Types.ObjectId, ref: "Address" }],
+    address: {
+      lane1: {
+        type: String,
+        required: [true, "Address lane 1 is required."],
+        trim: true,
+        maxlength: [255, "Address lane 1 cannot exceed 255 characters."],
+      },
+      lane2: {
+        type: String,
+        trim: true,
+        maxlength: [255, "Address lane 2 cannot exceed 255 characters."],
+      },
+      city: {
+        type: String,
+        required: [true, "City is required."],
+        trim: true,
+        maxlength: [100, "City name cannot exceed 100 characters."],
+        match: [/^[a-zA-Z\s]*$/, "City should only consist of alphabets."],
+      },
+      district: {
+        type: String,
+        required: [true, "District is required."],
+        trim: true,
+        maxlength: [100, "District name cannot exceed 100 characters."],
+        match: [/^[a-zA-Z\s]*$/, "District should only consist of alphabets."],
+      },
+      pincode: {
+        type: String,
+        require: [true, "Pincode is required"],
+        trim: true,
+        match: [/^\d{6}$/, "Pincode should be a 6-digit number."],
+      },
+      country: {
+        type: String,
+        required: [true, "Country is required."],
+        trim: true,
+        maxlength: [100, "Country name cannot exceed 100 characters."],
+        match: [/^[a-zA-Z\s]*$/, "Country should only consist of alphabets."],
+        uppercase: true,
+      },
+    },
     wishlist: [
       { type: mongoose.Schema.Types.ObjectId, ref: "Product", index: true },
     ],
