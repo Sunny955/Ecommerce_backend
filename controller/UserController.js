@@ -2,6 +2,7 @@ const { generateToken } = require("../config/jwtToken");
 const User = require("../models/UserModel");
 const Cart = require("../models/CartModel");
 const Product = require("../models/ProductModel");
+const Coupon = require("../models/CouponModel");
 const asyncHandler = require("express-async-handler");
 const {
   isValidEmail,
@@ -988,6 +989,148 @@ const getUserCart = asyncHandler(async (req, res) => {
   }
 });
 
+/**
+ * @route DELETE /api/user/delete-cart
+ * @description Empties the user's cart by removing the associated cart from the database.
+ * The function:
+ *   1. Validates the MongoDB ID of the user making the request.
+ *   2. Finds the user's associated cart using the "orderby" field.
+ *   3. Removes the found cart from the database.
+ * If the cart is successfully removed, the function will return the removed cart's details.
+ * If any issues arise, the function will return an error message.
+ * @param {Object} req - Express request object. Contains user ID from JWT payload.
+ * @param {Object} res - Express response object. Returns the removed cart's details or an error message.
+ * @throws {Error} Possible errors include:
+ *   1. Invalid MongoDB ID.
+ *   2. Issues with removing the cart from the database.
+ * @returns {Object} JSON response with removed cart details or an error message.
+ */
+const emptyCart = asyncHandler(async (req, res) => {
+  const userId = req?.user?._id;
+
+  // Validate the user's ID
+  if (!validateMongoDbId(userId)) {
+    return res.status(400).json({
+      success: false,
+      message: "Provided ID is not a valid MongoDB ID.",
+    });
+  }
+
+  try {
+    // Find and remove the associated cart for the user
+    const removedCart = await Cart.findOneAndRemove({ orderby: userId });
+
+    // If there wasn't any cart associated with the user, inform the client
+    if (!removedCart) {
+      return res.status(404).json({
+        success: false,
+        message: "No cart associated with the user.",
+      });
+    }
+
+    // Invalidate the cache for the specific user
+    const userKey = `/api/user/${userId}`;
+    cache.del(userKey);
+
+    res.status(200).json({
+      success: true,
+      data: removedCart,
+      message: "Items deleted from the cart successfully",
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Error emptying cart: " + error.message,
+    });
+  }
+});
+
+/**
+ * @route POST /api/user/cart/coupon
+ * @description Applies a coupon to the user's cart, calculates the new total after applying the discount,
+ * and updates the user's cart with this discounted total.
+ * The function:
+ *   1. Validates the MongoDB ID of the user making the request.
+ *   2. Checks if the provided coupon is valid.
+ *   3. Calculates the new total after applying the discount.
+ *   4. Updates the cart's `totalAfterDiscount` field.
+ * If successful, the function will return the new discounted total.
+ * If any issues arise, the function will return an error message.
+ * @param {Object} req - Express request object. Contains the user ID from JWT payload and the coupon name in the body.
+ * @param {Object} res - Express response object. Returns the new discounted total or an error message.
+ * @throws {Error} Possible errors include:
+ *   1. Invalid MongoDB ID.
+ *   2. Invalid coupon name.
+ *   3. Database errors during update process.
+ * @returns {Object} JSON response with new discounted total or an error message.
+ */
+const applyCoupon = asyncHandler(async (req, res) => {
+  const { coupon } = req.body;
+  const userId = req?.user?._id;
+
+  // Validate the user's ID
+  if (!validateMongoDbId(userId)) {
+    return res.status(400).json({
+      success: false,
+      message: "Provided ID is not a valid MongoDB ID.",
+    });
+  }
+  const upperCaseCoupon = coupon.toUpperCase();
+  try {
+    // Check if the provided coupon is valid
+    const validCoupon = await Coupon.findOne({ name: upperCaseCoupon });
+    if (!validCoupon) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid Coupon",
+      });
+    }
+
+    // Fetch the user's current cart total
+    const cart = await Cart.findOne({ orderby: userId }).populate(
+      "products.product"
+    );
+    if (!cart) {
+      return res.status(404).json({
+        success: false,
+        message: "No cart associated with the user.",
+      });
+    }
+
+    // Calculate the total after applying the coupon discount
+    const totalAfterDiscount = (
+      cart.cartTotal -
+      (cart.cartTotal * validCoupon.discount) / 100
+    ).toFixed(2);
+
+    // Update the cart's `totalAfterDiscount` field
+    const updatedCart = await Cart.findOneAndUpdate(
+      { orderby: userId },
+      { totalAfterDiscount },
+      { new: true, runValidators: true }
+    );
+
+    if (!updatedCart) {
+      return res.status(500).json({
+        success: false,
+        message: "Error updating the cart with the discounted total.",
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: { totalAfterDiscount },
+    });
+
+    // Invalidate the cache for the specific user
+    const userKey = `/api/user/${userId}`;
+    cache.del(userKey);
+  } catch (error) {
+    console.log(error.message);
+    return res.status(500).json({ success: false, message: error.message });
+  }
+});
+
 module.exports = {
   createUser,
   loginUser,
@@ -1007,4 +1150,6 @@ module.exports = {
   saveAddress,
   userCart,
   getUserCart,
+  emptyCart,
+  applyCoupon,
 };

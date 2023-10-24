@@ -7,6 +7,7 @@ var couponSchema = new mongoose.Schema({
     required: true,
     unique: true,
     uppercase: true,
+    index: true,
   },
   expiry: {
     type: Date,

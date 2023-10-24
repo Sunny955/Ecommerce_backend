@@ -18,6 +18,8 @@ const {
   saveAddress,
   userCart,
   getUserCart,
+  emptyCart,
+  applyCoupon,
 } = require("../controller/UserController");
 const router = express.Router();
 const { authMiddleware, isAdmin } = require("../middlewares/authMiddleware");
@@ -33,13 +35,13 @@ router.put("/update-password", authMiddleware, updatePassword);
 router.post("/login", timeoutMiddleware(10000), loginUser);
 router.post("/admin-login", timeoutMiddleware(10000), loginAdmin);
 router.post("/add-cart", timeoutMiddleware(15000), authMiddleware, userCart);
-router.get(
-  "/get-cart",
-  timeoutMiddleware(10000),
+router.post(
+  "/cart/apply-coupon",
+  timeoutMiddleware(20000),
   authMiddleware,
-  cacheMiddleware(3600),
-  getUserCart
+  applyCoupon
 );
+router.get("/get-cart", timeoutMiddleware(10000), authMiddleware, getUserCart);
 router.get(
   "/all-users",
   timeoutMiddleware(20000),
@@ -64,5 +66,6 @@ router.delete("/delete-user", authMiddleware, deleteUser);
 router.put("/edit-user", authMiddleware, updateUser);
 router.put("/block-user/:id", authMiddleware, isAdmin, blockUser);
 router.put("/unblock-user/:id", authMiddleware, isAdmin, unblockUser);
+router.delete("/empty-cart", authMiddleware, emptyCart);
 
 module.exports = router;
