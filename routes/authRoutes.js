@@ -33,7 +33,13 @@ router.put("/update-password", authMiddleware, updatePassword);
 router.post("/login", timeoutMiddleware(10000), loginUser);
 router.post("/admin-login", timeoutMiddleware(10000), loginAdmin);
 router.post("/add-cart", timeoutMiddleware(15000), authMiddleware, userCart);
-router.get("/get-cart", authMiddleware, getUserCart);
+router.get(
+  "/get-cart",
+  timeoutMiddleware(10000),
+  authMiddleware,
+  cacheMiddleware(3600),
+  getUserCart
+);
 router.get(
   "/all-users",
   timeoutMiddleware(20000),

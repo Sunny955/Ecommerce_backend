@@ -264,7 +264,7 @@ const getaUser = asyncHandler(async (req, res) => {
 
   try {
     const user = await User.findById(id).populate(
-      "wishlist",
+      "wishlist cart",
       "-createdAt -updatedAt -__v -quantity"
     );
     if (!user) {
@@ -920,12 +920,25 @@ const userCart = asyncHandler(async (req, res) => {
     // Now save the cart
     await newCart.save();
 
+    // Update user's cart field to reference the new cart
+    const user = await User.findById(userId);
+
+    user.cart = newCart._id;
+
+    // Update user's cart field to reference the new cart using updateOne
+    await User.updateOne({ _id: userId }, { $set: { cart: newCart._id } });
+
+    // Invalidate the cache for the specific user
+    const userKey = `/api/user/${userId}`;
+    cache.del(userKey);
+
     return res.status(201).json({ success: true, data: newCart });
   } catch (error) {
     // Depending on the error type, you can send different error responses
     if (error.message.includes("Product with ID")) {
       return res.status(404).json({ success: false, message: error.message });
     }
+    console.log("Error->", error);
     return res
       .status(500)
       .json({ success: false, message: "Failed to update cart" });
@@ -966,7 +979,7 @@ const getUserCart = asyncHandler(async (req, res) => {
         .status(404)
         .json({ success: false, message: "Cart not found for the user." });
     }
-    return res.status(200).json({ success: false, data: cart });
+    return res.status(200).json({ success: true, data: cart });
   } catch (error) {
     console.error(`Error occurred while fetching user cart: ${error.message}`); // It's useful to log the error for debugging
     return res

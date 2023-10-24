@@ -45,7 +45,10 @@ var userSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
-    cart: { type: mongoose.Schema.Types.ObjectId, ref: "Cart" },
+    cart: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Cart",
+    },
     address: {
       lane1: {
         type: String,
@@ -87,9 +90,7 @@ var userSchema = new mongoose.Schema(
         uppercase: true,
       },
     },
-    wishlist: [
-      { type: mongoose.Schema.Types.ObjectId, ref: "Product", index: true },
-    ],
+    wishlist: [{ type: mongoose.Schema.Types.ObjectId, ref: "Product" }],
     refreshToken: {
       type: String,
     },
@@ -107,6 +108,7 @@ var userSchema = new mongoose.Schema(
     },
   },
   {
+    id: false,
     timestamps: true,
   }
 );
