@@ -16,6 +16,8 @@ const {
   loginAdmin,
   getWishlist,
   saveAddress,
+  userCart,
+  getUserCart,
 } = require("../controller/UserController");
 const router = express.Router();
 const { authMiddleware, isAdmin } = require("../middlewares/authMiddleware");
@@ -30,6 +32,8 @@ router.put("/reset-password/:token", resetPassword);
 router.put("/update-password", authMiddleware, updatePassword);
 router.post("/login", timeoutMiddleware(10000), loginUser);
 router.post("/admin-login", timeoutMiddleware(10000), loginAdmin);
+router.post("/add-cart", timeoutMiddleware(15000), authMiddleware, userCart);
+router.get("/get-cart", authMiddleware, getUserCart);
 router.get(
   "/all-users",
   timeoutMiddleware(20000),

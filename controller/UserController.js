@@ -1,5 +1,7 @@
 const { generateToken } = require("../config/jwtToken");
 const User = require("../models/UserModel");
+const Cart = require("../models/CartModel");
+const Product = require("../models/ProductModel");
 const asyncHandler = require("express-async-handler");
 const {
   isValidEmail,
@@ -845,6 +847,134 @@ const saveAddress = asyncHandler(async (req, res) => {
   }
 });
 
+/**
+ * @route POST /api/user/add-cart
+ * @description Adds or updates the user's shopping cart after validating each product's existence and price.
+ * The request body should contain an array of cart items, where each item has fields: _id (product ID), count, and color.
+ * The function validates:
+ *   1. The MongoDB ID of the user making the request.
+ *   2. The existence of each product in the cart using its ID.
+ *   3. The current price of each product from the database.
+ * If any of the validations fail, the function will return an error message.
+ * If all validations pass, the cart is saved/updated for the user in the database.
+ * @param {Object} req - Express request object. Contains user ID from JWT payload and cart items in request body.
+ * @param {Object} res - Express response object. Returns the new or updated cart data or an error message.
+ * @throws {Error} Possible errors include:
+ *   1. Invalid MongoDB ID.
+ *   2. Product not found in the database.
+ *   3. Database errors during cart update or creation.
+ * @returns {Object} JSON response with the new or updated cart data or an error message.
+ */
+const userCart = asyncHandler(async (req, res) => {
+  const { cart } = req.body;
+  const userId = req?.user?._id;
+
+  // Validate the user's ID
+  if (!validateMongoDbId(userId)) {
+    return res
+      .status(400)
+      .json({ success: false, message: "Invalid MongoDB ID" });
+  }
+
+  try {
+    // Find and remove any existing cart for the user
+    await Cart.findOneAndRemove({ orderby: userId });
+
+    // Map over the cart items and prepare them for insertion
+    const products = await Promise.all(
+      cart.map(async (item) => {
+        const product = await Product.findById(item._id).select("price").exec();
+
+        if (!product) {
+          return res.status(400).json({
+            success: false,
+            message: "Product with this ID doesn't exists",
+          });
+        }
+
+        return {
+          product: item._id,
+          count: item.count,
+          color: item.color,
+          price: product.price,
+        };
+      })
+    );
+
+    // Calculate the cart total
+    const cartTotal = products.reduce(
+      (acc, curr) => acc + curr.price * curr.count,
+      0
+    );
+
+    // Prepare the new cart but don't save yet
+    const newCart = new Cart({
+      products,
+      cartTotal,
+      orderby: userId,
+    });
+
+    // Run validation
+    await newCart.validate();
+
+    // Now save the cart
+    await newCart.save();
+
+    return res.status(201).json({ success: true, data: newCart });
+  } catch (error) {
+    // Depending on the error type, you can send different error responses
+    if (error.message.includes("Product with ID")) {
+      return res.status(404).json({ success: false, message: error.message });
+    }
+    return res
+      .status(500)
+      .json({ success: false, message: "Failed to update cart" });
+  }
+});
+
+/**
+ * @route GET /api/user/get-cart
+ * @description Retrieves the user's shopping cart.
+ * It populates the product details for each item in the cart using the product's ID.
+ * The function validates:
+ *   1. The MongoDB ID of the user making the request.
+ * If validation fails, the function will return an error message.
+ * If validation passes, it returns the cart associated with the user.
+ * @param {Object} req - Express request object. Contains user ID from JWT payload.
+ * @param {Object} res - Express response object. Returns the user's cart data or an error message.
+ * @throws {Error} Possible errors include:
+ *   1. Invalid MongoDB ID.
+ *   2. Database errors during the retrieval process.
+ * @returns {Object} JSON response with the user's cart data or an error message.
+ */
+const getUserCart = asyncHandler(async (req, res) => {
+  const { _id } = req.user;
+
+  // Validate the user's ID
+  if (!validateMongoDbId(_id)) {
+    return res
+      .status(400)
+      .json({ success: false, message: "Invalid MongoDB ID" });
+  }
+
+  try {
+    const cart = await Cart.findOne({ orderby: _id }).populate(
+      "products.product"
+    );
+    if (!cart) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Cart not found for the user." });
+    }
+    return res.status(200).json({ success: false, data: cart });
+  } catch (error) {
+    console.error(`Error occurred while fetching user cart: ${error.message}`); // It's useful to log the error for debugging
+    return res
+      .status(500)
+      .json({ success: false, message: "Failed to retrieve cart" });
+  }
+});
+
 module.exports = {
   createUser,
   loginUser,
@@ -862,4 +992,6 @@ module.exports = {
   loginAdmin,
   getWishlist,
   saveAddress,
+  userCart,
+  getUserCart,
 };
