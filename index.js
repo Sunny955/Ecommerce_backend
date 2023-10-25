@@ -4,7 +4,7 @@ const dbConnect = require("./config/dbConnect");
 const app = express();
 const cookieParser = require("cookie-parser");
 const morgan = require("morgan");
-require("newrelic");
+// require("newrelic");
 
 const authRouter = require("./routes/authRoutes");
 const productRouter = require("./routes/productRoute");
