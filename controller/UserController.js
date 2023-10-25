@@ -3,6 +3,7 @@ const User = require("../models/UserModel");
 const Cart = require("../models/CartModel");
 const Product = require("../models/ProductModel");
 const Coupon = require("../models/CouponModel");
+const Order = require("../models/OrderModel");
 const asyncHandler = require("express-async-handler");
 const {
   isValidEmail,
@@ -16,6 +17,7 @@ const { sendEmail } = require("../controller/EmailController");
 const crypto = require("crypto");
 const bcrypt = require("bcrypt");
 const { cache } = require("../middlewares/cacheMiddleware");
+const uniqid = require("uniqid");
 const { validateAddressWithMapQuest } = require("../utils/authAddress");
 
 /**
@@ -1131,6 +1133,353 @@ const applyCoupon = asyncHandler(async (req, res) => {
   }
 });
 
+/**
+ * @route POST /api/user/cart/cash-order
+ * @description Creates a new order for the user based on their cart. The function:
+ *   1. Validates the MongoDB ID of the user making the request.
+ *   2. Ensures Cash on Delivery (COD) method is provided.
+ *   3. Fetches the user and their associated cart.
+ *   4. Determines the final order amount, considering any applied coupons.
+ *   5. Constructs and saves a new order with product details and payment intent.
+ *   6. Updates product quantities and sales figures in the Product collection.
+ * If successful, the function will return a success message and the created order details.
+ * If any issues arise, the function will return an error message.
+ * @param {Object} req - Express request object. Contains the user ID from JWT payload, and details like COD and coupon application in the body.
+ * @param {Object} res - Express response object. Returns a success message and order details or an error message.
+ * @throws {Error} Possible errors include:
+ *   1. Invalid MongoDB ID.
+ *   2. No COD provided.
+ *   3. No associated cart for the user.
+ *   4. Database errors during order creation or product updates.
+ * @returns {Object} JSON response with a success message and order details or an error message.
+ */
+const createOrder = asyncHandler(async (req, res) => {
+  const { COD, couponApplied } = req.body;
+  const { _id: userId } = req.user;
+
+  // Validate user's ID
+  if (!validateMongoDbId(userId)) {
+    return res.status(400).json({
+      success: false,
+      message: "Invalid MongoDB ID",
+    });
+  }
+
+  // Ensure Cash on Delivery (COD) method is provided
+  if (!COD) {
+    return res.status(400).json({
+      success: false,
+      message: "Create cash order failed",
+    });
+  }
+
+  try {
+    // Fetch the user and associated cart
+    const user = await User.findById(userId);
+    const userCart = await Cart.findOne({ orderby: userId });
+
+    if (!userCart) {
+      return res.status(404).json({
+        success: false,
+        message: "No cart associated with the user.",
+      });
+    }
+
+    // Determine the final amount based on whether a coupon has been applied
+    const finalAmount =
+      couponApplied && userCart.totalAfterDiscount
+        ? userCart.totalAfterDiscount
+        : userCart.cartTotal;
+
+    // Create a new order
+    const newOrder = await new Order({
+      products: userCart.products,
+      paymentIntent: {
+        id: uniqid(),
+        method: "COD",
+        amount: finalAmount,
+        status: "Cash on Delivery",
+        created: Date.now(),
+        currency: "inr",
+      },
+      orderby: userId,
+      orderStatus: "Cash on Delivery",
+    }).save();
+
+    // Update the product quantities and sales figures in the Product collection
+    const bulkOperations = userCart.products.map((item) => ({
+      updateOne: {
+        filter: { _id: item.product._id },
+        update: { $inc: { quantity: -item.count, sold: +item.count } },
+      },
+    }));
+    await Product.bulkWrite(bulkOperations);
+
+    // Once order is created successfully, remove the user's cart
+    await Cart.findByIdAndRemove(userCart._id);
+
+    // Update the user's cart reference to undefined
+    await User.findByIdAndUpdate(userId, { cart: undefined });
+
+    res.status(201).json({
+      success: true,
+      data: newOrder,
+      message: "Order created successfully",
+    });
+  } catch (error) {
+    console.error(`Error occurred while creating order: ${error.message}`);
+    res.status(500).json({
+      success: false,
+      message: "Failed to create order",
+    });
+  }
+});
+
+/**
+ * @route GET /api/user/order/get-orders
+ * @description Retrieves all the orders associated with a user.
+ * The function:
+ *   1. Validates the MongoDB ID of the user making the request.
+ *   2. Queries the database to fetch all orders associated with the user.
+ *   3. Populates product details and user details in the orders.
+ * If successful, the function will return the user's orders.
+ * If any issues arise, the function will return an error message.
+ * @param {Object} req - Express request object. Contains the user ID from JWT payload.
+ * @param {Object} res - Express response object. Returns the user's orders or an error message.
+ * @throws {Error} Possible errors include:
+ *   1. Invalid MongoDB ID.
+ *   2. Database errors during the query process.
+ * @returns {Object} JSON response with user's orders or an error message.
+ */
+const getOrders = asyncHandler(async (req, res) => {
+  const { _id: userId } = req.user;
+
+  // Validate the user's ID
+  if (!validateMongoDbId(userId)) {
+    return res.status(400).json({
+      success: false,
+      message: "Invalid MongoDB ID",
+    });
+  }
+
+  try {
+    // Fetch all orders associated with the user, while populating product and user details
+    const userOrders = await Order.find({ orderby: userId })
+      .select("-__v -createdAt -updatedAt")
+      .populate("products.product", "-__v -createdAt -updatedAt")
+      .populate("orderby", "_id address firstname lastname email cart wishlist")
+      .exec();
+
+    if (!userOrders || userOrders.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "No orders found for the user.",
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: userOrders,
+    });
+  } catch (error) {
+    console.error(
+      `Error occurred while fetching user orders: ${error.message}`
+    );
+    res.status(500).json({
+      success: false,
+      message: "Failed to retrieve orders",
+    });
+  }
+});
+
+/**
+ * @route GET /api/user/order/get-all-orders
+ * @description Retrieves all the orders across all users in the system.
+ * The function:
+ *   1. Queries the database to fetch all orders.
+ *   2. Populates product details and user details in the orders.
+ * If successful, the function will return all the orders.
+ * If any issues arise, the function will return an error message.
+ * @param {Object} req - Express request object.
+ * @param {Object} res - Express response object. Returns all orders or an error message.
+ * @throws {Error} Possible errors include database errors during the query process.
+ * @returns {Object} JSON response with all orders or an error message.
+ */
+const getAllOrders = asyncHandler(async (req, res) => {
+  try {
+    // Fetch all orders in the system, while populating product and user details
+    const allUserOrders = await Order.find()
+      .select("-__v -createdAt -updatedAt")
+      .populate("products.product", "-__v -createdAt -updatedAt")
+      .populate("orderby", "_id address firstname lastname email cart wishlist")
+      .exec();
+
+    if (!allUserOrders || allUserOrders.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "No orders found.",
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: allUserOrders,
+    });
+  } catch (error) {
+    console.error(`Error occurred while fetching all orders: ${error.message}`);
+    res.status(500).json({
+      success: false,
+      message: "Failed to retrieve all orders",
+    });
+  }
+});
+
+/**
+ * @route GET /api/user/order/:id
+ * @description Retrieves orders specific to a user based on the provided user ID.
+ * The function:
+ *   1. Validates the provided MongoDB user ID.
+ *   2. Queries the database to fetch orders associated with the user ID.
+ *   3. Populates product details and user details within the order.
+ * If successful, the function will return the user's order(s).
+ * If any issues arise, the function will return an error message.
+ * @param {Object} req - Express request object. Contains the user ID in the params.
+ * @param {Object} res - Express response object. Returns the user's orders or an error message.
+ * @throws {Error} Possible errors include:
+ *   1. Invalid MongoDB ID.
+ *   2. Database errors during the query process.
+ * @returns {Object} JSON response with the user's orders or an error message.
+ */
+const getOrderByUserId = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+
+  // Validate user's ID
+  if (!validateMongoDbId(id)) {
+    return res.status(400).json({
+      success: false,
+      message: "Invalid MongoDB ID",
+    });
+  }
+
+  try {
+    // Fetch orders associated with the provided user ID
+    const userOrders = await Order.find({ orderby: id })
+      .select("-__v -createdAt -updatedAt")
+      .populate("products.product", "-__v -createdAt -updatedAt")
+      .populate("orderby", "_id address firstname lastname email cart wishlist")
+      .exec();
+
+    if (!userOrders || userOrders.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "No orders found for the specified user.",
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: userOrders,
+    });
+  } catch (error) {
+    console.error(
+      `Error occurred while fetching orders for user ${id}: ${error.message}`
+    );
+    res.status(500).json({
+      success: false,
+      message: "Failed to retrieve orders for the specified user",
+    });
+  }
+});
+
+/**
+ * @route PUT /api/user/order/:id/status
+ * @description Updates the status of a specific order based on the provided order ID and status.
+ * The function:
+ *   1. Validates the provided MongoDB order ID.
+ *   2. Updates the order's status and associated payment intent status.
+ * If successful, the function returns the updated order.
+ * If any issues arise, the function returns an error message.
+ * @param {Object} req - Express request object. Contains the order ID in the params and desired status in the body.
+ * @param {Object} res - Express response object. Returns the updated order or an error message.
+ * @throws {Error} Possible errors include:
+ *   1. Invalid MongoDB ID.
+ *   2. Database errors during the update process.
+ * @returns {Object} JSON response with the updated order or an error message.
+ */
+const updateOrderStatus = asyncHandler(async (req, res) => {
+  const { status } = req.body;
+  const { id } = req.params;
+
+  // Validate order's ID
+  if (!validateMongoDbId(id)) {
+    return res.status(400).json({
+      success: false,
+      message: "Invalid MongoDB ID",
+    });
+  }
+
+  // Convert the provided status to lowercase for comparison
+  const formattedStatus = status.toLowerCase();
+
+  const validStatuses = [
+    "not processed",
+    "cash on delivery",
+    "processing",
+    "dispatched",
+    "cancelled",
+    "delivered",
+  ];
+
+  // Check if the provided status is one of the valid statuses
+  if (!validStatuses.includes(formattedStatus)) {
+    return res.status(400).json({
+      success: false,
+      message: "Invalid status provided. Please choose a valid order status.",
+    });
+  }
+
+  try {
+    const Status = status
+      .toLowerCase()
+      .split(" ")
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(" ");
+
+    // Update order's status and associated payment intent status
+    const updatedOrder = await Order.findByIdAndUpdate(
+      id,
+      {
+        orderStatus: Status,
+        paymentIntent: {
+          status: Status,
+        },
+      },
+      { new: true, runValidators: true }
+    );
+
+    // Check if the order exists
+    if (!updatedOrder) {
+      return res.status(404).json({
+        success: false,
+        message: "Order not found with the specified ID.",
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: updatedOrder,
+    });
+  } catch (error) {
+    console.error(
+      `Error occurred while updating order status: ${error.message}`
+    );
+    res.status(500).json({
+      success: false,
+      message: "Failed to update order status",
+    });
+  }
+});
+
 module.exports = {
   createUser,
   loginUser,
@@ -1152,4 +1501,9 @@ module.exports = {
   getUserCart,
   emptyCart,
   applyCoupon,
+  createOrder,
+  getOrders,
+  getAllOrders,
+  getOrderByUserId,
+  updateOrderStatus,
 };

@@ -40,11 +40,14 @@ var productSchema = new mongoose.Schema(
     },
     quantity: {
       type: Number,
+      default: 0,
       required: [true, "Quantity is required."],
+      min: [0, "Quantity can't be less than 0."],
     },
     sold: {
       type: Number,
       default: 0,
+      min: [0, "Sold can't be less than 0."],
       select: false,
     },
     images: {

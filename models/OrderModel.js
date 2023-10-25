@@ -35,7 +35,7 @@ const orderSchema = new mongoose.Schema(
       default: "Not Processed",
       enum: [
         "Not Processed",
-        "Cash on Delivery",
+        "Cash On Delivery",
         "Processing",
         "Dispatched",
         "Cancelled",
@@ -50,9 +50,24 @@ const orderSchema = new mongoose.Schema(
       ref: "User",
       required: true,
     },
+
+    orderDate: {
+      type: Date,
+      default: Date.now,
+      get: (date) => {
+        const day = String(date.getDate()).padStart(2, "0");
+        const month = String(date.getMonth() + 1).padStart(2, "0");
+        const year = date.getFullYear();
+        return `${year}-${month}-${day}`;
+      },
+    },
   },
   {
+    id: false,
     timestamps: true,
+    toJSON: {
+      getters: true,
+    },
   }
 );
 
