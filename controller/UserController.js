@@ -19,6 +19,7 @@ const bcrypt = require("bcrypt");
 const { cache } = require("../middlewares/cacheMiddleware");
 const uniqid = require("uniqid");
 const { validateAddressWithMapQuest } = require("../utils/authAddress");
+let prevOrder = new Order();
 
 /**
  * @route POST /api/user/register
@@ -1198,19 +1199,21 @@ const createOrder = asyncHandler(async (req, res) => {
         id: uniqid(),
         method: "COD",
         amount: finalAmount,
-        status: "Cash on Delivery",
+        status: "Cash On Delivery",
         created: Date.now(),
         currency: "inr",
       },
       orderby: userId,
-      orderStatus: "Cash on Delivery",
+      orderStatus: "Cash On Delivery",
     }).save();
 
     // Update the product quantities and sales figures in the Product collection
     const bulkOperations = userCart.products.map((item) => ({
       updateOne: {
         filter: { _id: item.product._id },
-        update: { $inc: { quantity: -item.count, sold: +item.count } },
+        update: {
+          $inc: { quantity: -item.count, sold: +item.count },
+        },
       },
     }));
     await Product.bulkWrite(bulkOperations);
@@ -1407,7 +1410,7 @@ const getOrderByUserId = asyncHandler(async (req, res) => {
  * @returns {Object} JSON response with the updated order or an error message.
  */
 const updateOrderStatus = asyncHandler(async (req, res) => {
-  const { status } = req.body;
+  const { orderStatus, paymentStatus } = req.body;
   const { id } = req.params;
 
   // Validate order's ID
@@ -1419,31 +1422,60 @@ const updateOrderStatus = asyncHandler(async (req, res) => {
   }
 
   // Convert the provided status to lowercase for comparison
-  const formattedStatus = status.toLowerCase();
+  const formattedStatus_1 = orderStatus.toLowerCase();
+  const formattedStatus_2 = paymentStatus.toLowerCase();
 
   const validStatuses = [
     "not processed",
-    "cash on delivery",
+    "in transit",
     "processing",
     "dispatched",
     "cancelled",
     "delivered",
   ];
 
-  // Check if the provided status is one of the valid statuses
-  if (!validStatuses.includes(formattedStatus)) {
+  const paymentStatuses = [
+    "processing",
+    "waiting",
+    "payment successfull",
+    "payment failed",
+    "declined",
+    "cash on delivery",
+  ];
+
+  // Check if the provided order status is one of the valid statuses
+  if (!validStatuses.includes(formattedStatus_1)) {
     return res.status(400).json({
       success: false,
-      message: "Invalid status provided. Please choose a valid order status.",
+      message:
+        "Invalid order status provided. Please choose a valid order status.",
+    });
+  }
+
+  // Check if the provided payment status is one of the valid statuses
+  if (!paymentStatuses.includes(formattedStatus_2)) {
+    return res.status(400).json({
+      success: false,
+      message:
+        "Invalid payment status provided. Please choose a valid payment status.",
     });
   }
 
   try {
-    const Status = status
+    const Status = orderStatus
       .toLowerCase()
       .split(" ")
       .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
       .join(" ");
+
+    const payment_status = paymentStatus
+      .toLowerCase()
+      .split(" ")
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(" ");
+
+    // finding the previous order status
+    const findOrder = await Order.findById(id);
 
     // Update order's status and associated payment intent status
     const updatedOrder = await Order.findByIdAndUpdate(
@@ -1451,7 +1483,12 @@ const updateOrderStatus = asyncHandler(async (req, res) => {
       {
         orderStatus: Status,
         paymentIntent: {
-          status: Status,
+          id: findOrder?.paymentIntent?.id,
+          method: findOrder?.paymentIntent?.method,
+          amount: findOrder?.paymentIntent?.amount,
+          created: findOrder?.paymentIntent?.created,
+          currency: findOrder?.paymentIntent?.currency,
+          status: payment_status,
         },
       },
       { new: true, runValidators: true }

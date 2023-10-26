@@ -22,12 +22,8 @@ const orderSchema = new mongoose.Schema(
     // An array of products in the order
     products: [productOrderSchema],
 
-    // Payment details (might want to expand on this in the future)
-    paymentIntent: {
-      // id: String,
-      // status: String,
-      // ...
-    },
+    // Payment details
+    paymentIntent: {},
 
     // Status of the order
     orderStatus: {
@@ -35,7 +31,7 @@ const orderSchema = new mongoose.Schema(
       default: "Not Processed",
       enum: [
         "Not Processed",
-        "Cash On Delivery",
+        "In Transit",
         "Processing",
         "Dispatched",
         "Cancelled",
