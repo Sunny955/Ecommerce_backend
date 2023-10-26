@@ -10,6 +10,7 @@ const {
   isValidName,
   isValidMobile,
   validateMongoDbId,
+  validateStatus,
 } = require("../utils/reqValidations");
 const { generateRefreshToken } = require("../config/refreshToken");
 const jwt = require("jsonwebtoken");
@@ -19,7 +20,6 @@ const bcrypt = require("bcrypt");
 const { cache } = require("../middlewares/cacheMiddleware");
 const uniqid = require("uniqid");
 const { validateAddressWithMapQuest } = require("../utils/authAddress");
-let prevOrder = new Order();
 
 /**
  * @route POST /api/user/register
@@ -887,7 +887,9 @@ const userCart = asyncHandler(async (req, res) => {
     // Map over the cart items and prepare them for insertion
     const products = await Promise.all(
       cart.map(async (item) => {
-        const product = await Product.findById(item._id).select("price").exec();
+        const product = await Product.findById(item._id)
+          .select("price quantity color title")
+          .exec();
 
         if (!product) {
           return res.status(400).json({
@@ -896,10 +898,24 @@ const userCart = asyncHandler(async (req, res) => {
           });
         }
 
+        if (item.count > product?.quantity) {
+          throw new Error(
+            `Only ${product.quantity} quantity of ${product.title} is available.`
+          );
+        }
+
+        if (item.color && !product.color.includes(item.color.toLowerCase())) {
+          throw new Error(
+            `${item.color} color for ${
+              product.title
+            } is not available. Available colors: ${product.color.join(", ")}.`
+          );
+        }
+
         return {
           product: item._id,
           count: item.count,
-          color: item.color,
+          color: item?.color || product?.color[0] || "General",
           price: product.price,
         };
       })
@@ -942,10 +958,20 @@ const userCart = asyncHandler(async (req, res) => {
     if (error.message.includes("Product with ID")) {
       return res.status(404).json({ success: false, message: error.message });
     }
-    console.log("Error->", error);
+
+    if (error.message.includes("Only")) {
+      // Checking if the error is due to exceeded quantity
+      return res.status(400).json({ success: false, message: error.message });
+    }
+
+    if (error.message.includes("color")) {
+      // Checking if the error is due to exceeded quantity
+      return res.status(400).json({ success: false, message: error.message });
+    }
+
     return res
       .status(500)
-      .json({ success: false, message: "Failed to update cart" });
+      .json({ success: false, message: "Internal server error" });
   }
 });
 
@@ -1413,17 +1439,12 @@ const updateOrderStatus = asyncHandler(async (req, res) => {
   const { orderStatus, paymentStatus } = req.body;
   const { id } = req.params;
 
-  // Validate order's ID
   if (!validateMongoDbId(id)) {
     return res.status(400).json({
       success: false,
       message: "Invalid MongoDB ID",
     });
   }
-
-  // Convert the provided status to lowercase for comparison
-  const formattedStatus_1 = orderStatus.toLowerCase();
-  const formattedStatus_2 = paymentStatus.toLowerCase();
 
   const validStatuses = [
     "not processed",
@@ -1433,68 +1454,42 @@ const updateOrderStatus = asyncHandler(async (req, res) => {
     "cancelled",
     "delivered",
   ];
-
   const paymentStatuses = [
     "processing",
     "waiting",
-    "payment successfull",
+    "payment successful",
     "payment failed",
     "declined",
     "cash on delivery",
   ];
 
-  // Check if the provided order status is one of the valid statuses
-  if (!validStatuses.includes(formattedStatus_1)) {
+  const Status = validateStatus(orderStatus, validStatuses);
+  const paymentStatusFormatted = validateStatus(paymentStatus, paymentStatuses);
+
+  if (!Status) {
     return res.status(400).json({
       success: false,
-      message:
-        "Invalid order status provided. Please choose a valid order status.",
+      message: "Invalid order status provided.",
     });
   }
 
-  // Check if the provided payment status is one of the valid statuses
-  if (!paymentStatuses.includes(formattedStatus_2)) {
+  if (!paymentStatusFormatted) {
     return res.status(400).json({
       success: false,
-      message:
-        "Invalid payment status provided. Please choose a valid payment status.",
+      message: "Invalid payment status provided.",
     });
   }
 
   try {
-    const Status = orderStatus
-      .toLowerCase()
-      .split(" ")
-      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-      .join(" ");
-
-    const payment_status = paymentStatus
-      .toLowerCase()
-      .split(" ")
-      .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-      .join(" ");
-
-    // finding the previous order status
-    const findOrder = await Order.findById(id);
-
-    // Update order's status and associated payment intent status
     const updatedOrder = await Order.findByIdAndUpdate(
       id,
       {
         orderStatus: Status,
-        paymentIntent: {
-          id: findOrder?.paymentIntent?.id,
-          method: findOrder?.paymentIntent?.method,
-          amount: findOrder?.paymentIntent?.amount,
-          created: findOrder?.paymentIntent?.created,
-          currency: findOrder?.paymentIntent?.currency,
-          status: payment_status,
-        },
+        "paymentIntent.status": paymentStatusFormatted, // directly update the nested field
       },
       { new: true, runValidators: true }
     );
 
-    // Check if the order exists
     if (!updatedOrder) {
       return res.status(404).json({
         success: false,
@@ -1507,9 +1502,7 @@ const updateOrderStatus = asyncHandler(async (req, res) => {
       data: updatedOrder,
     });
   } catch (error) {
-    console.error(
-      `Error occurred while updating order status: ${error.message}`
-    );
+    console.error(`Error updating order status: ${error.message}`);
     res.status(500).json({
       success: false,
       message: "Failed to update order status",
