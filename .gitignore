@@ -4,3 +4,4 @@
 /public
 newrelic.js
 newrelic_agent.log
+response_times.log

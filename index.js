@@ -6,6 +6,7 @@ const cookieParser = require("cookie-parser");
 const morgan = require("morgan");
 const helmet = require("helmet");
 const xss = require("xss-clean");
+const logResponseTime = require("./middlewares/logResponseTime");
 // require("newrelic");
 
 const authRouter = require("./routes/authRoutes");
@@ -23,14 +24,12 @@ const PORT = process.env.PORT || 3000;
 dbConnect();
 
 app.use(morgan("dev"));
+app.use(logResponseTime); // log the routes which are taking more than 5 secs
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(cookieParser());
 
-//Set security headers
 app.use(helmet());
-
-//Prevents XSS attacks
 app.use(xss());
 
 app.use("/api/user", authRouter);
