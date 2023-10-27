@@ -74,6 +74,7 @@ var blogSchema = new mongoose.Schema(
     },
   },
   {
+    id: false,
     toJSON: {
       virtuals: true,
       getters: true,

@@ -9,6 +9,7 @@ const {
   likeBlog,
   dislikeBlog,
   uploadImages,
+  deleteImage,
 } = require("../controller/BlogController");
 const { advancedFiltering } = require("../middlewares/advanceFiltering");
 const { authMiddleware, isAdmin } = require("../middlewares/authMiddleware");
@@ -46,6 +47,12 @@ router.put(
   uploadPhoto.array("images", 2),
   blogImgResize,
   uploadImages
+);
+router.put(
+  "/delete-image/:id",
+  timeoutMiddleware(15000),
+  authMiddleware,
+  deleteImage
 );
 
 module.exports = router;

@@ -9,6 +9,7 @@ const {
   rating,
   updateAverageRating,
   uploadImages,
+  deleteImage,
 } = require("../controller/ProductController");
 const router = express.Router();
 const { authMiddleware, isAdmin } = require("../middlewares/authMiddleware");
@@ -18,7 +19,13 @@ const { cacheMiddleware } = require("../middlewares/cacheMiddleware");
 const { uploadPhoto, productImgResize } = require("../middlewares/uploadImage");
 const { timeoutMiddleware } = require("../middlewares/timeoutMiddleware");
 
-router.post("/create-product", authMiddleware, isAdmin, createProduct);
+router.post(
+  "/create-product",
+  timeoutMiddleware(10000),
+  authMiddleware,
+  isAdmin,
+  createProduct
+);
 router.get(
   "/get-a-product/:id",
   timeoutMiddleware(10000),
@@ -72,6 +79,12 @@ router.put(
   uploadPhoto.array("images", 10),
   productImgResize,
   uploadImages
+);
+router.put(
+  "/delete-image/:id",
+  timeoutMiddleware(15000),
+  authMiddleware,
+  deleteImage
 );
 
 module.exports = router;

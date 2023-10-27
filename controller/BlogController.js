@@ -5,7 +5,10 @@ const asyncHandler = require("express-async-handler");
 const { cache } = require("../middlewares/cacheMiddleware");
 const BLOGS_KEY = "/all-blogs";
 const blogKey = (id) => `/get-blog/${id}`;
-const { cloudinaryUploadImg } = require("../utils/cloudinary");
+const {
+  cloudinaryUploadImg,
+  cloudinaryDeleteImg,
+} = require("../utils/cloudinary");
 const fs = require("fs");
 
 /**
@@ -123,6 +126,7 @@ const getBlog = asyncHandler(async (req, res) => {
         new: true, // Return the updated object
       }
     )
+      .select("-__v")
       .populate(
         "likes",
         "-__v -refreshToken -passwordResetExpires -passwordResetToken -password -wishlist -cart -createdAt -updatedAt"
@@ -134,7 +138,9 @@ const getBlog = asyncHandler(async (req, res) => {
 
     // Check if the blog was found
     if (!blog) {
-      return res.status(404).json({ message: "Blog not found." });
+      return res
+        .status(404)
+        .json({ success: false, message: "Blog not found." });
     }
 
     // Return the retrieved blog entry
@@ -144,13 +150,11 @@ const getBlog = asyncHandler(async (req, res) => {
 
     // If there are validation errors, send them to the client
     if (error.name === "ValidationError") {
-      return res.status(400).json({ message: error.message });
+      return res.status(400).json({ success: false, message: error.message });
     }
 
     // Send a generic server error for other types of errors
-    res
-      .status(500)
-      .json({ message: "Server error while retrieving the blog." });
+    res.status(500).json({ message: "Internal server error" });
   }
 });
 
@@ -292,6 +296,7 @@ const likeBlog = asyncHandler(async (req, res) => {
 
     // Invalidate specific blog cache
     cache.del(blogKey(blogId));
+    cache.del(BLOGS_KEY);
 
     res.status(200).json({ success: true, data: updatedBlog });
   } catch (error) {
@@ -373,6 +378,7 @@ const dislikeBlog = asyncHandler(async (req, res) => {
 
     // Invalidate specific blog cache
     cache.del(blogKey(blogId));
+    cache.del(BLOGS_KEY);
 
     // Return the updated blog data
     res.status(200).json({ success: true, data: updatedBlog });
@@ -385,7 +391,7 @@ const dislikeBlog = asyncHandler(async (req, res) => {
 });
 
 /**
- * @route PUT api/upload-image/:id
+ * @route PUT api/blogs/upload-image/:id
  * @description Upload multiple images for a product and save URLs to the database.
  * @param {Object} req - Express request object, expects product ID in params and images in files.
  * @param {Object} res - Express response object. Returns updated product or an error message.
@@ -438,6 +444,7 @@ const uploadImages = asyncHandler(async (req, res) => {
 
     // Invalidate specific blog cache
     cache.del(blogKey(id));
+    cache.del(BLOGS_KEY);
 
     res.json({ success: true, data: updatedBlog });
   } catch (error) {
@@ -445,6 +452,76 @@ const uploadImages = asyncHandler(async (req, res) => {
     res
       .status(500)
       .json({ success: false, message: "Failed to upload images" });
+  }
+});
+
+/**
+ * @route PUT api/blogs/delete-image/:id
+ * @description Delete a specific image associated with a product from Cloudinary and update the product's image array in the database. Requires the public_id of the image to be passed in the request body.
+ * @param {Object} req - Express request object, expects product ID in params and the image's public_id in the body.
+ * @param {Object} res - Express response object. Returns a message indicating success or failure of the deletion process.
+ * @throws {Error} Possible errors include invalid MongoDB ID, public_id not present in the product's images array, failure to delete the image from Cloudinary, or database errors.
+ * @returns {Object} JSON response with a success or error message.
+ */
+const deleteImage = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const { public_id } = req.body;
+
+  if (!validateMongoDbId(id)) {
+    return res
+      .status(400)
+      .json({ success: false, message: "Invalid MongoDB ID" });
+  }
+
+  if (!public_id) {
+    return res.status(400).json({
+      success: false,
+      message: "public key is required to delete an image",
+    });
+  }
+
+  const blog = await Blog.findById(id).select("images");
+
+  if (!blog) {
+    return res.status(404).json({ success: false, message: "Blog not found" });
+  }
+
+  const exists = blog?.images.some((image) => image.public_id === public_id);
+
+  if (!exists) {
+    return res.status(400).json({
+      success: false,
+      message: "The provided public_id does not exist in the images array.",
+    });
+  }
+
+  try {
+    const deleted = await cloudinaryDeleteImg(public_id);
+    if (deleted && deleted.result === "ok") {
+      // Remove the image entry from the product's images array
+      await Blog.findByIdAndUpdate(id, {
+        $pull: { images: { public_id: public_id } },
+      });
+
+      // Invalidate specific blog cache
+      cache.del(blogKey(id));
+      cache.del(BLOGS_KEY);
+
+      res.json({
+        success: true,
+        message: `Image with public_id ${public_id} is deleted successfully`,
+      });
+    } else {
+      // Handle the scenario where Cloudinary deletion was not successful
+      res.status(500).json({
+        success: false,
+        message: "Failed to delete image from Cloudinary",
+      });
+    }
+  } catch (error) {
+    console.log("Error occurred", error.message);
+
+    res.status(500).json({ success: false, message: "Internal server error" });
   }
 });
 
@@ -457,4 +534,5 @@ module.exports = {
   likeBlog,
   dislikeBlog,
   uploadImages,
+  deleteImage,
 };

@@ -5,7 +5,10 @@ const slugify = require("slugify");
 const { validateMongoDbId } = require("../utils/reqValidations");
 const keyGetAllProducts = "/api/product/get-all-products";
 const { cache } = require("../middlewares/cacheMiddleware");
-const { cloudinaryUploadImg } = require("../utils/cloudinary");
+const {
+  cloudinaryUploadImg,
+  cloudinaryDeleteImg,
+} = require("../utils/cloudinary");
 const fs = require("fs");
 
 /**
@@ -487,6 +490,76 @@ const uploadImages = asyncHandler(async (req, res) => {
   }
 });
 
+/**
+ * @route PUT api/produtc/delete-image/:id
+ * @description Delete a specific image associated with a product from Cloudinary and update the product's image array in the database. Requires the public_id of the image to be passed in the request body.
+ * @param {Object} req - Express request object, expects product ID in params and the image's public_id in the body.
+ * @param {Object} res - Express response object. Returns a message indicating success or failure of the deletion process.
+ * @throws {Error} Possible errors include invalid MongoDB ID, public_id not present in the product's images array, failure to delete the image from Cloudinary, or database errors.
+ * @returns {Object} JSON response with a success or error message.
+ */
+const deleteImage = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  const { public_id } = req.body;
+
+  if (!validateMongoDbId(id)) {
+    return res
+      .status(400)
+      .json({ success: false, message: "Invalid MongoDB ID" });
+  }
+
+  if (!public_id) {
+    return res.status(400).json({
+      success: false,
+      message: "public key is required to delete an image",
+    });
+  }
+
+  const product = await Product.findById(id).select("images");
+
+  if (!product) {
+    return res.status(404).json({ message: "Product not found" });
+  }
+
+  const exists = product?.images.some((image) => image.public_id === public_id);
+
+  if (!exists) {
+    return res.status(400).json({
+      success: false,
+      message: "The provided public_id does not exist in the images array.",
+    });
+  }
+
+  try {
+    const deleted = await cloudinaryDeleteImg(public_id);
+    if (deleted && deleted.result === "ok") {
+      // Remove the image entry from the product's images array
+      await Product.findByIdAndUpdate(id, {
+        $pull: { images: { public_id: public_id } },
+      });
+
+      // Invalidate cache after updating a product
+      cache.del(keyGetAllProducts);
+      cache.del(`/api/product/get-a-product/${id}`);
+
+      res.json({
+        success: true,
+        message: `Image with public_id ${public_id} is deleted successfully`,
+      });
+    } else {
+      // Handle the scenario where Cloudinary deletion was not successful
+      res.status(500).json({
+        success: false,
+        message: "Failed to delete image from Cloudinary",
+      });
+    }
+  } catch (error) {
+    console.log("Error occurred", error.message);
+
+    res.status(500).json({ success: false, message: "Internal server error" });
+  }
+});
+
 module.exports = {
   createProduct,
   getaProduct,
@@ -497,4 +570,5 @@ module.exports = {
   rating,
   updateAverageRating,
   uploadImages,
+  deleteImage,
 };

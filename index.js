@@ -4,6 +4,8 @@ const dbConnect = require("./config/dbConnect");
 const app = express();
 const cookieParser = require("cookie-parser");
 const morgan = require("morgan");
+const helmet = require("helmet");
+const xss = require("xss-clean");
 // require("newrelic");
 
 const authRouter = require("./routes/authRoutes");
@@ -24,6 +26,12 @@ app.use(morgan("dev"));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(cookieParser());
+
+//Set security headers
+app.use(helmet());
+
+//Prevents XSS attacks
+app.use(xss());
 
 app.use("/api/user", authRouter);
 app.use("/api/product", productRouter);
