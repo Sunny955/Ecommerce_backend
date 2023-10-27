@@ -5,6 +5,7 @@ const cache = new NodeCache({ stdTTL: 3600 * 12, checkperiod: 600 }); //  auto-c
 const cacheMiddleware = (duration) => {
   return (req, res, next) => {
     const key = req.originalUrl || req.url;
+    console.log("key-->", key);
     const cachedResponse = cache.get(key);
     if (cachedResponse) {
       return res.send(JSON.parse(cachedResponse));

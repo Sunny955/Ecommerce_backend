@@ -262,7 +262,7 @@ const addToWishlist = asyncHandler(async (req, res) => {
 
     // Invalidate cache after updating a product
     cache.del(keyGetAllProducts);
-    cache.del(`/api/product/get-a-product/${id}`);
+    cache.del(`/api/product/get-a-product/${prodId}`);
 
     // Return a success response with the updated user and message
     res.json({
@@ -353,7 +353,7 @@ const rating = asyncHandler(async (req, res) => {
     }
     // Invalidate cache after updating a product
     cache.del(keyGetAllProducts);
-    cache.del(`/api/product/get-a-product/${id}`);
+    cache.del(`/api/product/get-a-product/${prodId}`);
 
     // Return a success response
     res.status(200).json({
@@ -413,7 +413,7 @@ const updateAverageRating = asyncHandler(async (req, res) => {
 
     // Invalidate cache after updating a product
     cache.del(keyGetAllProducts);
-    cache.del(`/api/product/get-a-product/${id}`);
+    cache.del(`/api/product/get-a-product/${prodId}`);
 
     // Return the updated product
     res.status(200).json({ success: true, data: updatedProduct });

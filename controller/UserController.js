@@ -12,6 +12,7 @@ const {
   validateMongoDbId,
   validateStatus,
 } = require("../utils/reqValidations");
+const allUsersKey = "/api/user/all-users";
 const { generateRefreshToken } = require("../config/refreshToken");
 const jwt = require("jsonwebtoken");
 const { sendEmail } = require("../controller/EmailController");
@@ -53,7 +54,6 @@ const createUser = asyncHandler(async (req, res) => {
     const newUser = await User.create({ email, ...otherData });
 
     // Invalidate the cache for all users
-    const allUsersKey = "/api/user/all-users";
     cache.del(allUsersKey);
 
     res.status(201).json({ success: true, data: newUser });
@@ -317,6 +317,7 @@ const deleteUser = asyncHandler(async (req, res, next) => {
     // Invalidate the cache for the specific user
     const userKey = `/api/user/${_id}`;
     cache.del(userKey);
+    cache.del(allUsersKey);
 
     res.status(200).json({
       success: true,
@@ -418,6 +419,7 @@ const updateUser = asyncHandler(async (req, res) => {
     // Invalidate the cache for the specific user
     const userKey = `/api/user/${_id}`;
     cache.del(userKey);
+    cache.del(allUsersKey);
 
     res.status(200).json({
       message: "User updated successfully.",
@@ -471,6 +473,7 @@ const blockUser = asyncHandler(async (req, res) => {
     // Invalidate the cache for the specific user
     const userKey = `/api/user/${id}`;
     cache.del(userKey);
+    cache.del(allUsersKey);
 
     res.status(200).json({ message: "User successfully blocked." }); // OK
   } catch (error) {
@@ -525,6 +528,7 @@ const unblockUser = asyncHandler(async (req, res) => {
     // Invalidate the cache for the specific user
     const userKey = `/api/user/${id}`;
     cache.del(userKey);
+    cache.del(allUsersKey);
 
     // User was successfully unblocked
     res.status(200).json({ message: "User successfully unblocked." }); // OK
@@ -572,6 +576,7 @@ const updatePassword = asyncHandler(async (req, res, next) => {
     // Invalidate the cache for the specific user
     const userKey = `/api/user/${_id}`;
     cache.del(userKey);
+    cache.del(allUsersKey);
 
     // Ideally, don't send back the entire user object with the password, even if it's hashed.
     // Instead, send a success message.
@@ -837,6 +842,11 @@ const saveAddress = asyncHandler(async (req, res) => {
         message: "User not found.",
       });
     }
+
+    // Invalidate the cache for the specific user
+    const userKey = `/api/user/${userId}`;
+    cache.del(userKey);
+    cache.del(allUsersKey);
 
     res.status(200).json({
       success: true,
@@ -1146,14 +1156,14 @@ const applyCoupon = asyncHandler(async (req, res) => {
       });
     }
 
+    // Invalidate the cache for the specific user
+    const userKey = `/api/user/${userId}`;
+    cache.del(userKey);
+
     res.status(200).json({
       success: true,
       data: { totalAfterDiscount },
     });
-
-    // Invalidate the cache for the specific user
-    const userKey = `/api/user/${userId}`;
-    cache.del(userKey);
   } catch (error) {
     console.log(error.message);
     return res.status(500).json({ success: false, message: error.message });
@@ -1249,6 +1259,14 @@ const createOrder = asyncHandler(async (req, res) => {
 
     // Update the user's cart reference to undefined
     await User.findByIdAndUpdate(userId, { cart: undefined });
+
+    // Invalidate the cache for the specific user
+    const userKey_1 = `/api/user/order/get-orders`;
+    const userKey_2 = `/api/user/order/get-all-orders`;
+    const userKey_3 = `/api/user/order/get-orderby-user/${userId}`;
+    cache.del(userKey_1);
+    cache.del(userKey_2);
+    cache.del(userKey_3);
 
     res.status(201).json({
       success: true,
@@ -1496,6 +1514,14 @@ const updateOrderStatus = asyncHandler(async (req, res) => {
         message: "Order not found with the specified ID.",
       });
     }
+
+    // Invalidate the cache for the specific user
+    const userKey_1 = `/api/user/order/get-orders`;
+    const userKey_2 = `/api/user/order/get-all-orders`;
+    const userKey_3 = `/api/user/order/get-orderby-user/${userId}`;
+    cache.del(userKey_1);
+    cache.del(userKey_2);
+    cache.del(userKey_3);
 
     res.status(200).json({
       success: true,

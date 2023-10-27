@@ -3,8 +3,8 @@ const User = require("../models/UserModel");
 const { validateMongoDbId } = require("../utils/reqValidations");
 const asyncHandler = require("express-async-handler");
 const { cache } = require("../middlewares/cacheMiddleware");
-const BLOGS_KEY = "/all-blogs";
-const blogKey = (id) => `/get-blog/${id}`;
+const BLOGS_KEY = "/api/blog/all-blogs";
+const blogKey = (id) => `/api/blog/get-blog/${id}`;
 const {
   cloudinaryUploadImg,
   cloudinaryDeleteImg,
@@ -142,7 +142,6 @@ const getBlog = asyncHandler(async (req, res) => {
         .status(404)
         .json({ success: false, message: "Blog not found." });
     }
-
     // Return the retrieved blog entry
     res.status(200).json({ success: true, data: blog });
   } catch (error) {

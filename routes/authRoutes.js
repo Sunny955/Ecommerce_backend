@@ -64,7 +64,7 @@ router.get(
 );
 router.get("/refresh", handleRefreshToken);
 router.get("/logout", logoutUser);
-router.get("/get-wishlist", authMiddleware, getWishlist);
+router.get("/get-wishlist", authMiddleware, cacheMiddleware(3600), getWishlist);
 router.put("/save-address", authMiddleware, saveAddress);
 router.get(
   "/:id",
