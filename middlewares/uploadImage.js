@@ -88,4 +88,32 @@ const blogImgResize = async (req, res, next) => {
   next();
 };
 
-module.exports = { uploadPhoto, productImgResize, blogImgResize };
+const userImgResize = async (req, res, next) => {
+  if (!req.files) return next();
+
+  await Promise.all(
+    req.files.map(async (file) => {
+      const destination = `public/images/users/${file.filename}`;
+      await sharp(file.path)
+        .resize(50, 50)
+        .toFormat("jpeg")
+        .jpeg({ quality: 90 })
+        .toFile(destination);
+
+      fs.unlink(file.path, (err) => {
+        if (err) {
+          console.error(`Error removing file: ${file.path}`);
+        }
+      });
+      file.path = destination;
+    })
+  );
+  next();
+};
+
+module.exports = {
+  uploadPhoto,
+  productImgResize,
+  blogImgResize,
+  userImgResize,
+};

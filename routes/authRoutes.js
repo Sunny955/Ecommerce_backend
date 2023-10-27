@@ -25,6 +25,8 @@ const {
   getAllOrders,
   getOrderByUserId,
   updateOrderStatus,
+  uploadPic,
+  deletePic,
 } = require("../controller/UserController");
 const router = express.Router();
 const { authMiddleware, isAdmin } = require("../middlewares/authMiddleware");
@@ -32,6 +34,7 @@ const { advancedFiltering } = require("../middlewares/advanceFiltering");
 const User = require("../models/UserModel");
 const { cacheMiddleware } = require("../middlewares/cacheMiddleware");
 const { timeoutMiddleware } = require("../middlewares/timeoutMiddleware");
+const { uploadPhoto, userImgResize } = require("../middlewares/uploadImage");
 
 router.post("/register", createUser);
 router.post("/forgot-password-token", forgotPasswordToken);
@@ -47,6 +50,20 @@ router.post(
   applyCoupon
 );
 router.post("/cart/cash-order", authMiddleware, createOrder);
+router.post(
+  "/upload/user-pic",
+  timeoutMiddleware(15000),
+  authMiddleware,
+  uploadPhoto.array("images", 1),
+  userImgResize,
+  uploadPic
+);
+router.post(
+  "/delete/user-pic",
+  timeoutMiddleware(15000),
+  authMiddleware,
+  deletePic
+);
 router.put(
   "/order/update-order-status/:id",
   authMiddleware,

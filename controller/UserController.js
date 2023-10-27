@@ -21,6 +21,11 @@ const bcrypt = require("bcrypt");
 const { cache } = require("../middlewares/cacheMiddleware");
 const uniqid = require("uniqid");
 const { validateAddressWithMapQuest } = require("../utils/authAddress");
+const {
+  cloudinaryUploadImg,
+  cloudinaryDeleteImg,
+} = require("../utils/cloudinary");
+const fs = require("fs");
 
 /**
  * @route POST /api/user/register
@@ -1260,14 +1265,6 @@ const createOrder = asyncHandler(async (req, res) => {
     // Update the user's cart reference to undefined
     await User.findByIdAndUpdate(userId, { cart: undefined });
 
-    // Invalidate the cache for the specific user
-    const userKey_1 = `/api/user/order/get-orders`;
-    const userKey_2 = `/api/user/order/get-all-orders`;
-    const userKey_3 = `/api/user/order/get-orderby-user/${userId}`;
-    cache.del(userKey_1);
-    cache.del(userKey_2);
-    cache.del(userKey_3);
-
     res.status(201).json({
       success: true,
       data: newOrder,
@@ -1515,14 +1512,6 @@ const updateOrderStatus = asyncHandler(async (req, res) => {
       });
     }
 
-    // Invalidate the cache for the specific user
-    const userKey_1 = `/api/user/order/get-orders`;
-    const userKey_2 = `/api/user/order/get-all-orders`;
-    const userKey_3 = `/api/user/order/get-orderby-user/${userId}`;
-    cache.del(userKey_1);
-    cache.del(userKey_2);
-    cache.del(userKey_3);
-
     res.status(200).json({
       success: true,
       data: updatedOrder,
@@ -1532,6 +1521,144 @@ const updateOrderStatus = asyncHandler(async (req, res) => {
     res.status(500).json({
       success: false,
       message: "Failed to update order status",
+    });
+  }
+});
+
+/**
+ * @route POST /api/user/upload/user-pic
+ * @description Uploads a profile picture for a user and replaces the pic field in the user model with the URL from Cloudinary.
+ * @param {Object} req - Express request object. Expects the user ID in params and the image in the request files.
+ * @param {Object} res - Express response object. Returns the updated user or an error message.
+ * @throws {Error} Possible errors include validation, database, or image upload errors.
+ * @returns {Object} JSON response with the updated user or an error message.
+ */
+const uploadPic = asyncHandler(async (req, res) => {
+  const { _id } = req.user;
+
+  // No file uploaded
+  if (!req.files || req.files.length === 0) {
+    return res
+      .status(400)
+      .json({ success: false, message: "No file attached" });
+  } else if (req.files.length > 1) {
+    return res.status(400).json({
+      success: false,
+      message: "Multiple files functionality doesn't exist",
+    });
+  }
+
+  try {
+    const file = req?.files?.[0];
+    let profilePicUrl, public_id;
+    if (fs.existsSync(file.path)) {
+      const uploadResult = await cloudinaryUploadImg(file.path);
+      public_id = uploadResult.public_id;
+      profilePicUrl = uploadResult.secure_url;
+      fs.unlinkSync(file.path);
+    } else {
+      console.log("Path doesn't exists!");
+      return res.status(400).json({
+        success: false,
+        message: "Unable to find the path of the image",
+      });
+    }
+
+    const updatedUser = await User.findByIdAndUpdate(
+      _id,
+      {
+        pic: {
+          url: profilePicUrl,
+          public_key: public_id,
+        },
+      },
+      {
+        new: true,
+        runValidators: true,
+      }
+    );
+
+    if (!updatedUser) {
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found" });
+    }
+
+    const userKey = `/api/user/${_id}`;
+    cache.del(userKey);
+
+    res.json({ success: true, data: updatedUser });
+  } catch (error) {
+    console.error("Error in uploading user profile pic:", error.message);
+    res
+      .status(500)
+      .json({ success: false, message: "Failed to upload profile picture" });
+  }
+});
+
+/**
+ * @route POST /api/user/delete/user-pic
+ * @description Deletes the profile picture of a user from Cloudinary, and resets the user's profile picture back to the default one in the database.
+ * @param {Object} req - Express request object. Expects the user ID in params and the public_id of the image in the body.
+ * @param {Object} res - Express response object. Returns a success message or an error message.
+ * @throws {Error} Possible errors include validation mismatches, Cloudinary deletion errors, and database errors.
+ * @returns {Object} JSON response with a success or error message.
+ */
+const deletePic = asyncHandler(async (req, res) => {
+  const { _id } = req.user;
+  const { public_id } = req.body;
+
+  // Validate that a public ID is provided
+  if (!public_id) {
+    return res.status(400).json({
+      success: false,
+      message: "public key is required to delete an image",
+    });
+  }
+
+  // Fetch the user with the specified ID and select the pic field
+  const user = await User.findById(_id).select("pic").exec();
+
+  // Return error if the user doesn't exist
+  if (!user) {
+    return res.status(400).json({ success: false, message: "Invalid user" });
+  }
+
+  // Return error if the provided public ID doesn't match the one in the user's document
+  if (user?.pic?.public_key !== public_id) {
+    return res
+      .status(400)
+      .json({ success: false, message: "Invalid public_key" });
+  }
+
+  try {
+    // Attempt to delete the image from Cloudinary
+    const deleted = await cloudinaryDeleteImg(public_id);
+    if (deleted && deleted.result === "ok") {
+      // Reset the pic URL to default and update public_key in the database
+      const defaultPicURL = process.env.PUBLIC_URL;
+      await User.findByIdAndUpdate(_id, {
+        "pic.url": defaultPicURL,
+        "pic.public_key": "No public key",
+      });
+
+      // Invalidate the user's cache
+      const userKey = `/api/user/${_id}`;
+      cache.del(userKey);
+
+      // Respond with a success message
+      return res.status(200).json({
+        success: true,
+        message: "Image successfully deleted and reset to default",
+      });
+    } else {
+      throw new Error("Failed to delete image from Cloudinary");
+    }
+  } catch (error) {
+    console.error("Error deleting image:", error.message);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
     });
   }
 });
@@ -1562,4 +1689,6 @@ module.exports = {
   getAllOrders,
   getOrderByUserId,
   updateOrderStatus,
+  uploadPic,
+  deletePic,
 };

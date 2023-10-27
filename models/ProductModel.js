@@ -70,7 +70,12 @@ var productSchema = new mongoose.Schema(
       ],
       validate: [arrayLimit, "Exceeds the limit of 10 images."],
     },
-    color: [],
+    color: [
+      {
+        type: String,
+        lowercase: true,
+      },
+    ],
     tags: String,
     ratings: [
       {
