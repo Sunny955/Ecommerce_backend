@@ -98,6 +98,12 @@ var productSchema = new mongoose.Schema(
   }
 );
 
+// Add the text index
+productSchema.index({
+  title: "text",
+  description: "text",
+});
+
 function arrayLimit(val) {
   return val.length <= 10;
 }

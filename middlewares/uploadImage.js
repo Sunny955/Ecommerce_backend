@@ -88,6 +88,12 @@ const blogImgResize = async (req, res, next) => {
   next();
 };
 
+/**
+ * Middleware to resize user images
+ * @param {Object} req - Express request object.
+ * @param {Object} res - Express response object.
+ * @param {Function} next - Express next middleware function.
+ */
 const userImgResize = async (req, res, next) => {
   if (!req.files) return next();
 

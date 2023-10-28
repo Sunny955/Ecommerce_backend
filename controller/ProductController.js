@@ -26,7 +26,9 @@ const createProduct = asyncHandler(async (req, res) => {
   // Validation - Ensuring title exists and is not an empty string
   const { title } = req.body;
   if (!title || title.trim() === "") {
-    return res.status(400).json({ message: "Product title is required" });
+    return res
+      .status(400)
+      .json({ success: false, message: "Product title is required" });
   }
 
   // Create slug from title
@@ -63,7 +65,9 @@ const getaProduct = asyncHandler(async (req, res) => {
   const { id } = req.params;
 
   if (!validateMongoDbId(id)) {
-    return res.status(400).json({ message: "Invalid product ID format" });
+    return res
+      .status(400)
+      .json({ success: false, message: "Invalid product ID format" });
   }
 
   const product = await Product.findById(id).populate(
@@ -72,7 +76,9 @@ const getaProduct = asyncHandler(async (req, res) => {
   );
 
   if (!product) {
-    return res.status(404).json({ message: "Product not found" });
+    return res
+      .status(404)
+      .json({ success: false, message: "Product not found" });
   }
 
   res.status(200).json({ success: true, data: product });
@@ -91,7 +97,9 @@ const getAllProducts = asyncHandler(async (req, res) => {
   const products = await req.advancedFilter;
 
   if (!products || products.length === 0) {
-    return res.status(404).json({ message: "No products available!" });
+    return res
+      .status(404)
+      .json({ success: false, message: "No products available!" });
   }
 
   res.status(200).json({
@@ -142,7 +150,9 @@ const updateProduct = asyncHandler(async (req, res) => {
 
     // Check if the product exists
     if (!updatedProduct) {
-      return res.status(404).json({ error: "Product not found." });
+      return res
+        .status(404)
+        .json({ success: false, message: "Product not found." });
     }
 
     // Invalidate cache after updating a product
