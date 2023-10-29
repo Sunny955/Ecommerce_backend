@@ -32,13 +32,13 @@ app.use(cookieParser());
 app.use(helmet());
 app.use(xss());
 
-app.use("/api/user", authRouter);
-app.use("/api/product", productRouter);
-app.use("/api/blog", blogRouter);
-app.use("/api/blog-cat", blogCatRouter);
-app.use("/api/product-cat", productCatRouter);
-app.use("/api/brand", brandRouter);
-app.use("/api/coupon", couponRouter);
+app.use("/api/v1/user", authRouter);
+app.use("/api/v1/product", productRouter);
+app.use("/api/v1/blog", blogRouter);
+app.use("/api/v1/blog-cat", blogCatRouter);
+app.use("/api/v1/product-cat", productCatRouter);
+app.use("/api/v1/brand", brandRouter);
+app.use("/api/v1/coupon", couponRouter);
 
 app.use(notFound);
 app.use(errorHandler);
