@@ -27,6 +27,8 @@ const {
 } = require("../utils/cloudinary");
 const fs = require("fs");
 
+// for every route put v1 after api like: api/v1/user/...
+
 /**
  * @route POST /api/user/register
  * @description Creates a new user in the system. The function expects the 'email' field to be unique.
@@ -991,6 +993,121 @@ const userCart = asyncHandler(async (req, res) => {
 });
 
 /**
+ * @route PUT /api/user/cart/update-cart
+ * @description Updates the cart for a user by adding new products or updating the quantity of existing products.
+ * The function uses the user's ID (from the request user object) to identify the user's cart and products
+ * from the request body to update the cart. If any validation fails (like a product not being available
+ * or exceeding available quantity), an error message is returned.
+ * @param {Object} req - Express request object containing the user's ID and an array of products (with their IDs, desired quantities, and optionally colors) to be added/updated.
+ * @param {Object} res - Express response object. Returns the updated cart upon successful cart update or an appropriate error message.
+ * @throws {Error} Possible errors include invalid product IDs, exceeding available quantity, unavailable color selection, or any other issues during the cart update process.
+ * @returns {Object} JSON response with the updated cart upon successful cart update or an appropriate error message.
+ */
+const updateUserCart = asyncHandler(async (req, res) => {
+  const { productsToAdd } = req.body;
+  const userId = req?.user?._id;
+
+  // Validate the user's ID
+  if (!validateMongoDbId(userId)) {
+    return res
+      .status(400)
+      .json({ success: false, message: "Invalid MongoDB ID" });
+  }
+
+  try {
+    // Fetch the existing cart for the user
+    const existingCart = await Cart.findOne({ orderby: userId });
+    if (!existingCart) {
+      return res
+        .status(404)
+        .json({ success: false, message: "No cart found for this user" });
+    }
+
+    const additionalProducts = [];
+
+    for (let item of productsToAdd) {
+      const product = await Product.findById(item._id)
+        .select("price quantity color title")
+        .exec();
+
+      if (!product) {
+        throw new Error(`Product with ID ${item._id} doesn't exist.`);
+      }
+
+      if (item.count > product?.quantity) {
+        throw new Error(
+          `Only ${product.quantity} quantity of ${product.title} is available.`
+        );
+      }
+
+      if (item.color && !product.color.includes(item.color.toLowerCase())) {
+        throw new Error(
+          `${item.color} color for ${
+            product.title
+          } is not available. Available colors: ${product.color.join(", ")}.`
+        );
+      }
+
+      // Check if this product is already in the cart
+      const existingProductInCart = existingCart.products.find(
+        (p) =>
+          p.product.toString() === item._id &&
+          p.color === (item?.color || product?.color[0] || "General")
+      );
+
+      if (existingProductInCart) {
+        // If product already exists in cart, update its count
+        existingProductInCart.count += item.count;
+      } else {
+        // If product doesn't exist in cart, add it
+        additionalProducts.push({
+          product: item._id,
+          count: item.count,
+          color: item?.color || product?.color[0] || "General",
+          price: product.price,
+        });
+      }
+    }
+
+    // Add the additional products (new entries) to the existing cart's products
+    existingCart.products.push(...additionalProducts);
+
+    // Update the cart total
+    existingCart.cartTotal += additionalProducts.reduce(
+      (acc, curr) => acc + curr.price * curr.count,
+      0
+    );
+
+    // Validate and save the updated cart
+    await existingCart.validate();
+    await existingCart.save();
+
+    // Invalidate the cache for the specific user
+    const userKey = `/api/user/${userId}`;
+    cache.del(userKey);
+
+    return res.status(200).json({ success: true, data: existingCart });
+  } catch (error) {
+    // Depending on the error type, you can send different error responses
+    if (error.message.includes("Product with ID")) {
+      return res.status(404).json({ success: false, message: error.message });
+    }
+
+    if (error.message.includes("Only")) {
+      return res.status(400).json({ success: false, message: error.message });
+    }
+
+    if (error.message.includes("color")) {
+      return res.status(400).json({ success: false, message: error.message });
+    }
+
+    return res
+      .status(500)
+      .json({ success: false, message: "Internal server error" });
+  }
+});
+
+/**
  * @route GET /api/user/get-cart
  * @description Retrieves the user's shopping cart.
  * It populates the product details for each item in the cart using the product's ID.
@@ -1016,9 +1133,9 @@ const getUserCart = asyncHandler(async (req, res) => {
   }
 
   try {
-    const cart = await Cart.findOne({ orderby: _id }).populate(
-      "products.product"
-    );
+    const cart = await Cart.findOne({ orderby: _id })
+      .select("-__v")
+      .populate("products.product");
     if (!cart) {
       return res
         .status(404)
@@ -1681,6 +1798,7 @@ module.exports = {
   getWishlist,
   saveAddress,
   userCart,
+  updateUserCart,
   getUserCart,
   emptyCart,
   applyCoupon,

@@ -27,6 +27,7 @@ const {
   updateOrderStatus,
   uploadPic,
   deletePic,
+  updateUserCart,
 } = require("../controller/UserController");
 const router = express.Router();
 const { authMiddleware, isAdmin } = require("../middlewares/authMiddleware");
@@ -69,6 +70,12 @@ router.put(
   authMiddleware,
   isAdmin,
   updateOrderStatus
+);
+router.put(
+  "/cart/update-cart",
+  timeoutMiddleware(5000),
+  authMiddleware,
+  updateUserCart
 );
 router.get("/get-cart", timeoutMiddleware(10000), authMiddleware, getUserCart);
 router.get(
