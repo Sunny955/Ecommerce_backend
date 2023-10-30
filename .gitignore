@@ -1,7 +1,6 @@
 /package-lock.json
 /node_modules
 .env
-/public
 newrelic.js
 newrelic_agent.log
 response_times.log
