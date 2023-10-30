@@ -32,6 +32,12 @@ app.use(cookieParser());
 app.use(helmet());
 app.use(xss());
 
+app.get("/", async (req, res) => {
+  res
+    .status(200)
+    .json({ success: false, data: "Hello you have reached the right place" });
+});
+
 app.use("/api/v1/user", authRouter);
 app.use("/api/v1/product", productRouter);
 app.use("/api/v1/blog", blogRouter);
