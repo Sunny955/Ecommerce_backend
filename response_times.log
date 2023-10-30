@@ -1,0 +1,12 @@
+API took 5245.802125ms to respond. Route: PUT /api/product/upload-image/65316db270d5fc5f5a0d9087 at 2023-10-27T18:35:33.196Z
+API took 9126.864167ms to respond. Route: GET /api/v1/user/all-users?firstname=Kumar at 2023-10-29T10:04:36.407Z
+API took 11436.552458ms to respond. Route: POST /api/v1/user/add-cart at 2023-10-29T16:25:05.979Z
+API took 10014.538833ms to respond. Route: GET /api/v1/user/get-cart at 2023-10-29T16:29:09.687Z
+API took 10015.964958ms to respond. Route: GET /api/v1/user/get-cart at 2023-10-30T11:26:42.665Z
+API took 10014.485292ms to respond. Route: GET /api/v1/user/65251bbf790f7ae58f5f4124 at 2023-10-30T11:48:22.163Z
+API took 10017.553666ms to respond. Route: GET /api/v1/user/get-info at 2023-10-30T14:46:47.769Z
+API took 5014.488583ms to respond. Route: GET /api/v1/user/get-info/ at 2023-10-30T14:58:14.775Z
+API took 5015.571583ms to respond. Route: GET /api/v1/user/get-info/ at 2023-10-30T15:01:18.661Z
+API took 12314.13025ms to respond. Route: GET /api/v1/user/all-users at 2023-10-30T15:05:34.621Z
+API took 5014.812625ms to respond. Route: GET /api/v1/user/get-info at 2023-10-30T15:07:25.817Z
+API took 5207.349916ms to respond. Route: POST /api/v1/user/upload/user-pic at 2023-10-30T19:00:51.111Z
