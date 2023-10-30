@@ -264,7 +264,7 @@ const getAllUsers = asyncHandler(async (req, res) => {
 });
 
 /**
- * @route GET /api/user/:id
+ * @route GET /api/user/get-user/:id
  * @description Retrieves a specific user from the system based on the provided user ID in the route parameters.
  * The function will first validate the format of the MongoDB ID, and if it's incorrect, a relevant error message is returned.
  * If the user does not exist in the system, an appropriate "not found" message will be sent back to the client.
@@ -302,6 +302,38 @@ const getaUser = asyncHandler(async (req, res) => {
     res.status(500).json({
       message: "Error retrieving user: " + error.message,
     });
+  }
+});
+
+/**
+ * @route GET /api/user/get-info
+ * @description Retrieves the details of the currently logged-in user based on the user ID extracted from the authenticated request.
+ * If the user doesn't exist in the database, an appropriate "not found" message is sent back to the client.
+ * The function returns select fields for the user, namely: firstname, lastname, address, wishlist, cart, pic, mobile, and email.
+ * Both the cart and wishlist fields are populated to provide detailed information.
+ * @param {Object} req - Express request object. Expected to contain the authenticated user ID.
+ * @param {Object} res - Express response object. Returns the details of the logged-in user if found, or an appropriate error message.
+ * @throws {Error} Possible errors include user not found in the database, database errors, or other internal issues.
+ * @returns {Object} JSON response with a success flag, the logged-in user's details (if found), or an error message.
+ */
+const getLoggedinUser = asyncHandler(async (req, res) => {
+  const userId = req?.user?._id;
+
+  try {
+    const user = await User.findById(userId)
+      .select("firstname lastname address wishlist cart pic mobile email")
+      .populate("cart wishlist")
+      .exec();
+
+    if (!user) {
+      return res.status(400).json({ success: false, message: "Invalid user" });
+    }
+
+    res.status(200).json({ success: true, data: user });
+  } catch (error) {
+    console.log("Errror occured", error.message);
+
+    res.status(500).json({ success: false, message: "Internal server error" });
   }
 });
 
@@ -748,10 +780,12 @@ const getWishlist = asyncHandler(async (req, res) => {
 
   try {
     // Fetch the user and populate the wishlist field
-    const userWithWishlist = await User.findById(_id).populate({
-      path: "wishlist",
-      select: "-ratings -createdAt -updatedAt -__v -quantity",
-    });
+    const userWithWishlist = await User.findById(_id)
+      .select("pic wishlist firstname lastname")
+      .populate({
+        path: "wishlist",
+        select: "-ratings -createdAt -updatedAt -__v -quantity",
+      });
 
     if (!userWithWishlist) {
       return res.status(404).json({
@@ -1803,6 +1837,7 @@ module.exports = {
   loginUser,
   getAllUsers,
   getaUser,
+  getLoggedinUser,
   deleteUser,
   updateUser,
   blockUser,

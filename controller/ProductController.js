@@ -11,6 +11,8 @@ const {
 } = require("../utils/cloudinary");
 const fs = require("fs");
 
+// for every route put v1 after api like: api/v1/product/...
+
 /**
  * @route POST api/product/create
  * @description Create a new product in the database. The title of the product is mandatory and

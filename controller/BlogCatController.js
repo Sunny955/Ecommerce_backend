@@ -1,6 +1,8 @@
 const Category = require("../models/BlogCategoryModel");
 const asyncHandler = require("express-async-handler");
-const {validateMongoDbId} = require("../utils/reqValidations");
+const { validateMongoDbId } = require("../utils/reqValidations");
+
+// for every route put v1 after api like: api/v1/blog-cat/...
 
 /**
  * @route POST api/blog-cat/create-cat
@@ -11,31 +13,33 @@ const {validateMongoDbId} = require("../utils/reqValidations");
  * @returns {Object} JSON response with the new category's details or an error message.
  */
 const createCategory = asyncHandler(async (req, res) => {
-    // Validate request body data
-    if (!req.body.title) {
-      return res.status(400).json({ message: "Category title is required" });
+  // Validate request body data
+  if (!req.body.title) {
+    return res.status(400).json({ message: "Category title is required" });
+  }
+
+  try {
+    // Create a new category using the request body
+    const newCategory = await Category.create(req.body);
+
+    // Send the newly created category as the response
+    res.status(201).json({ success: true, data: newCategory });
+  } catch (error) {
+    // Check for duplicate key error
+    if (error.code === 11000 && error.keyPattern && error.keyPattern.title) {
+      return res
+        .status(400)
+        .json({ message: "Category title already exists!" });
     }
-  
-    try {
-      // Create a new category using the request body
-      const newCategory = await Category.create(req.body);
-  
-      // Send the newly created category as the response
-      res.status(201).json({ success: true, data: newCategory });
-    } catch (error) {
-      // Check for duplicate key error
-      if (error.code === 11000 && error.keyPattern && error.keyPattern.title) {
-        return res.status(400).json({ message: 'Category title already exists!' });
-      }
-      // Handle other errors
-      error.message = "Error creating category";
-      res.status(500).json({ message: error.message });
-    }
+    // Handle other errors
+    error.message = "Error creating category";
+    res.status(500).json({ message: error.message });
+  }
 });
 
 /**
  * @route PUT api/blog-cat/update-cat/:id
- * @description Update the details of a specific category based on the provided category ID. 
+ * @description Update the details of a specific category based on the provided category ID.
  * @param {Object} req - Express request object. Expected to have the category ID in params and any updated fields in the body.
  * @param {Object} res - Express response object. Will return the updated category details or an appropriate error message.
  * @throws {Error} Possible errors include invalid MongoDB ID format, category not found, and other server/database errors.
@@ -52,8 +56,7 @@ const updateCategory = asyncHandler(async (req, res) => {
   try {
     const updatedCategory = await Category.findByIdAndUpdate(id, req.body, {
       new: true,
-    })
-    .select('-__v');
+    }).select("-__v");
     // Check if category was found and updated
 
     if (!updatedCategory) {
@@ -63,7 +66,9 @@ const updateCategory = asyncHandler(async (req, res) => {
     res.status(200).json({ success: true, data: updatedCategory });
   } catch (error) {
     // General error handling
-    res.status(500).json({success: false, message: "Error updating category" });
+    res
+      .status(500)
+      .json({ success: false, message: "Error updating category" });
   }
 });
 
@@ -80,7 +85,9 @@ const deleteCategory = asyncHandler(async (req, res) => {
 
   // Validate MongoDB ID
   if (!validateMongoDbId(id)) {
-    return res.status(400).json({ success: false, message: "Invalid category ID" });
+    return res
+      .status(400)
+      .json({ success: false, message: "Invalid category ID" });
   }
 
   try {
@@ -88,13 +95,19 @@ const deleteCategory = asyncHandler(async (req, res) => {
 
     // Check if category was found and deleted
     if (!deletedCategory) {
-      return res.status(404).json({ success: false, message: "Category not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "Category not found" });
     }
 
-    res.status(200).json({ success: true, message: "Category deleted successfully" });
+    res
+      .status(200)
+      .json({ success: true, message: "Category deleted successfully" });
   } catch (error) {
     // Handle unexpected errors
-    res.status(500).json({ success: false, message: "Error deleting category" });
+    res
+      .status(500)
+      .json({ success: false, message: "Error deleting category" });
   }
 });
 
@@ -111,21 +124,27 @@ const getCategory = asyncHandler(async (req, res) => {
 
   // Validate MongoDB ID
   if (!validateMongoDbId(id)) {
-    return res.status(400).json({ success: false, message: "Invalid category ID" });
+    return res
+      .status(400)
+      .json({ success: false, message: "Invalid category ID" });
   }
 
   try {
-    const category = await Category.findById(id).select('-__v');
+    const category = await Category.findById(id).select("-__v");
 
     // Check if category was found
     if (!category) {
-      return res.status(404).json({ success: false, message: "Category not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "Category not found" });
     }
 
     res.status(200).json({ success: true, data: category });
   } catch (error) {
     // Handle unexpected errors
-    res.status(500).json({ success: false, message: "Error retrieving category" });
+    res
+      .status(500)
+      .json({ success: false, message: "Error retrieving category" });
   }
 });
 
@@ -139,16 +158,22 @@ const getCategory = asyncHandler(async (req, res) => {
  */
 const getAllCategories = asyncHandler(async (req, res) => {
   try {
-    const categories = await Category.find().select('-__v');
+    const categories = await Category.find().select("-__v");
 
     // Return the list of categories
     res.status(200).json({ success: true, data: categories });
   } catch (error) {
     // Handle unexpected errors
-    res.status(500).json({ success: false, message: "Error retrieving categories" });
+    res
+      .status(500)
+      .json({ success: false, message: "Error retrieving categories" });
   }
 });
 
-
-
-  module.exports = {createCategory,updateCategory,deleteCategory,getCategory,getAllCategories};
+module.exports = {
+  createCategory,
+  updateCategory,
+  deleteCategory,
+  getCategory,
+  getAllCategories,
+};

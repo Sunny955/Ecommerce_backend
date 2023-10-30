@@ -2,6 +2,8 @@ const Coupon = require("../models/CouponModel");
 const asyncHandler = require("express-async-handler");
 const { validateMongoDbId } = require("../utils/reqValidations");
 
+// // for every route put v1 after api like: api/v1/coupon/...
+
 /**
  * @route POST api/coupon/create
  * @description Create a new coupon in the database. The function expects the 'name', 'discount', and 'expiry' fields in the request body. The 'name' is transformed to uppercase, and several validations are enforced by the Coupon schema in the database.

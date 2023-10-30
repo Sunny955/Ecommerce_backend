@@ -1,6 +1,8 @@
 const Brand = require("../models/BrandModel");
 const asyncHandler = require("express-async-handler");
-const {validateMongoDbId} = require("../utils/reqValidations");
+const { validateMongoDbId } = require("../utils/reqValidations");
+
+// for every route put v1 after api like: api/v1/brand/...
 
 /**
  * @route POST api/brand/create-brand
@@ -11,31 +13,31 @@ const {validateMongoDbId} = require("../utils/reqValidations");
  * @returns {Object} JSON response with the new brand's details or an error message.
  */
 const createBrand = asyncHandler(async (req, res) => {
-    // Validate request body data
-    if (!req.body.title) {
-      return res.status(400).json({ message: "brand title is required" });
+  // Validate request body data
+  if (!req.body.title) {
+    return res.status(400).json({ message: "brand title is required" });
+  }
+
+  try {
+    // Create a new brand using the request body
+    const newBrand = await Brand.create(req.body);
+
+    // Send the newly created brand as the response
+    res.status(201).json({ success: true, data: newBrand });
+  } catch (error) {
+    // Check for duplicate key error
+    if (error.code === 11000 && error.keyPattern && error.keyPattern.title) {
+      return res.status(400).json({ message: "Brand title already exists!" });
     }
-  
-    try {
-      // Create a new brand using the request body
-      const newBrand = await Brand.create(req.body);
-  
-      // Send the newly created brand as the response
-      res.status(201).json({ success: true, data: newBrand });
-    } catch (error) {
-      // Check for duplicate key error
-      if (error.code === 11000 && error.keyPattern && error.keyPattern.title) {
-        return res.status(400).json({ message: 'Brand title already exists!' });
-      }
-      // Handle other errors
-      error.message = "Error creating brand";
-      res.status(500).json({ message: error.message });
-    }
+    // Handle other errors
+    error.message = "Error creating brand";
+    res.status(500).json({ message: error.message });
+  }
 });
 
 /**
  * @route PUT api/brand/update-brand/:id
- * @description Update the details of a specific brand based on the provided brand ID. 
+ * @description Update the details of a specific brand based on the provided brand ID.
  * @param {Object} req - Express request object. Expected to have the brand ID in params and any updated fields in the body.
  * @param {Object} res - Express response object. Will return the updated brand details or an appropriate error message.
  * @throws {Error} Possible errors include invalid MongoDB ID format, brand not found, and other server/database errors.
@@ -52,8 +54,7 @@ const updateBrand = asyncHandler(async (req, res) => {
   try {
     const updatedBrand = await Brand.findByIdAndUpdate(id, req.body, {
       new: true,
-    })
-    .select('-__v');
+    }).select("-__v");
     // Check if brand was found and updated
 
     if (!updatedBrand) {
@@ -63,7 +64,7 @@ const updateBrand = asyncHandler(async (req, res) => {
     res.status(200).json({ success: true, data: updatedBrand });
   } catch (error) {
     // General error handling
-    res.status(500).json({success: false, message: "Error updating brand" });
+    res.status(500).json({ success: false, message: "Error updating brand" });
   }
 });
 
@@ -80,7 +81,9 @@ const deleteBrand = asyncHandler(async (req, res) => {
 
   // Validate MongoDB ID
   if (!validateMongoDbId(id)) {
-    return res.status(400).json({ success: false, message: "Invalid brand ID" });
+    return res
+      .status(400)
+      .json({ success: false, message: "Invalid brand ID" });
   }
 
   try {
@@ -88,13 +91,23 @@ const deleteBrand = asyncHandler(async (req, res) => {
 
     // Check if brand was found and deleted
     if (!deletedBrand) {
-      return res.status(404).json({ success: false, message: "Brand not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "Brand not found" });
     }
 
-    res.status(200).json({ success: true, message: "Brand deleted successfully" });
+    res
+      .status(200)
+      .json({ success: true, message: "Brand deleted successfully" });
   } catch (error) {
     // Handle unexpected errors
-    res.status(500).json({ success: false, message: "Error deleting brand", error: error.message });
+    res
+      .status(500)
+      .json({
+        success: false,
+        message: "Error deleting brand",
+        error: error.message,
+      });
   }
 });
 
@@ -111,21 +124,31 @@ const getBrand = asyncHandler(async (req, res) => {
 
   // Validate MongoDB ID
   if (!validateMongoDbId(id)) {
-    return res.status(400).json({ success: false, message: "Invalid brand ID" });
+    return res
+      .status(400)
+      .json({ success: false, message: "Invalid brand ID" });
   }
 
   try {
-    const brand = await Brand.findById(id).select('-__v');
+    const brand = await Brand.findById(id).select("-__v");
 
     // Check if brand was found
     if (!brand) {
-      return res.status(404).json({ success: false, message: "Brand not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "Brand not found" });
     }
 
     res.status(200).json({ success: true, data: brand });
   } catch (error) {
     // Handle unexpected errors
-    res.status(500).json({ success: false, message: "Error retrieving brand", error: error.message });
+    res
+      .status(500)
+      .json({
+        success: false,
+        message: "Error retrieving brand",
+        error: error.message,
+      });
   }
 });
 
@@ -139,16 +162,26 @@ const getBrand = asyncHandler(async (req, res) => {
  */
 const getAllBrands = asyncHandler(async (req, res) => {
   try {
-    const brands = await Brand.find().select('-__v');
+    const brands = await Brand.find().select("-__v");
 
     // Return the list of categories
     res.status(200).json({ success: true, data: brands });
   } catch (error) {
     // Handle unexpected errors
-    res.status(500).json({ success: false, message: "Error retrieving categories", error: error.message });
+    res
+      .status(500)
+      .json({
+        success: false,
+        message: "Error retrieving categories",
+        error: error.message,
+      });
   }
 });
 
-
-
-  module.exports = {createBrand,updateBrand,deleteBrand,getBrand,getAllBrands};
+module.exports = {
+  createBrand,
+  updateBrand,
+  deleteBrand,
+  getBrand,
+  getAllBrands,
+};

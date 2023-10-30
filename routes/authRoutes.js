@@ -28,6 +28,7 @@ const {
   uploadPic,
   deletePic,
   updateUserCart,
+  getLoggedinUser,
 } = require("../controller/UserController");
 const router = express.Router();
 const { authMiddleware, isAdmin } = require("../middlewares/authMiddleware");
@@ -82,6 +83,7 @@ router.get(
   "/all-users",
   timeoutMiddleware(20000),
   authMiddleware,
+  isAdmin,
   advancedFiltering(User),
   cacheMiddleware(3600),
   getAllUsers
@@ -90,14 +92,6 @@ router.get("/refresh", handleRefreshToken);
 router.get("/logout", logoutUser);
 router.get("/get-wishlist", authMiddleware, cacheMiddleware(3600), getWishlist);
 router.put("/save-address", authMiddleware, saveAddress);
-router.get(
-  "/:id",
-  timeoutMiddleware(10000),
-  authMiddleware,
-  isAdmin,
-  cacheMiddleware(3600),
-  getaUser
-);
 router.get("/order/get-orders", authMiddleware, getOrders);
 router.get("/order/get-all-orders", authMiddleware, isAdmin, getAllOrders);
 router.get(
@@ -105,6 +99,20 @@ router.get(
   authMiddleware,
   isAdmin,
   getOrderByUserId
+);
+router.get(
+  "/get-info",
+  timeoutMiddleware(5000),
+  authMiddleware,
+  getLoggedinUser
+);
+router.get(
+  "/get-user/:id",
+  timeoutMiddleware(10000),
+  authMiddleware,
+  isAdmin,
+  cacheMiddleware(3600),
+  getaUser
 );
 router.delete("/delete-user", authMiddleware, deleteUser);
 router.put("/edit-user", authMiddleware, updateUser);

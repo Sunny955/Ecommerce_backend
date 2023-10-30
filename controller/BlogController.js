@@ -11,8 +11,10 @@ const {
 } = require("../utils/cloudinary");
 const fs = require("fs");
 
+// for every route put v1 after api like: api/v1/blog/...
+
 /**
- * @route POST /api/blogs/create-blog
+ * @route POST /api/blog/create-blog
  * @description Creates a new blog entry. Expects title, description, and other relevant fields in the request body.
  * @access Private/Protected - Access limited to authenticated users with proper roles (if role-based).
  *
@@ -158,7 +160,7 @@ const getBlog = asyncHandler(async (req, res) => {
 });
 
 /**
- * @route GET /api/blogs/all-blogs
+ * @route GET /api/blog/all-blogs
  * @description Retrieves all blog entries. Optionally supports pagination and limiting the number of results.
  * @access Public/Private (depending on how it's configured in the route, but for this example, we assume it's public)
  *
@@ -185,7 +187,7 @@ const getAllBlogs = asyncHandler(async (req, res) => {
 });
 
 /**
- * @route DELETE /api/blogs/delete-blog/:id
+ * @route DELETE /api/blog/delete-blog/:id
  * @description Deletes a specific blog entry by ID.
  * @access Private/Protected - Access limited to authenticated users with proper roles (such as admins or the author of the blog).
  *
@@ -231,7 +233,7 @@ const deleteBlog = asyncHandler(async (req, res) => {
 });
 
 /**
- * @route POST /api/blogs/like
+ * @route POST /api/blog/like
  * @description Allows a user to like a blog. If the user has previously disliked the blog, the dislike is removed. If the user has already liked the blog, the like is removed (unlike).
  * @access Private - Access limited to authenticated users.
  *
@@ -307,7 +309,7 @@ const likeBlog = asyncHandler(async (req, res) => {
 });
 
 /**
- * @route POST /api/blogs/dislike-blog
+ * @route POST /api/blog/dislike-blog
  * @description Allows a user to dislike a blog. If the user has previously liked the blog, the like is removed. If the user has already disliked the blog, the dislike is removed (undislike).
  * @access Private - Access limited to authenticated users.
  *
@@ -390,7 +392,7 @@ const dislikeBlog = asyncHandler(async (req, res) => {
 });
 
 /**
- * @route PUT api/blogs/upload-image/:id
+ * @route PUT api/blog/upload-image/:id
  * @description Upload multiple images for a product and save URLs to the database.
  * @param {Object} req - Express request object, expects product ID in params and images in files.
  * @param {Object} res - Express response object. Returns updated product or an error message.
@@ -455,7 +457,7 @@ const uploadImages = asyncHandler(async (req, res) => {
 });
 
 /**
- * @route PUT api/blogs/delete-image/:id
+ * @route PUT api/blog/delete-image/:id
  * @description Delete a specific image associated with a product from Cloudinary and update the product's image array in the database. Requires the public_id of the image to be passed in the request body.
  * @param {Object} req - Express request object, expects product ID in params and the image's public_id in the body.
  * @param {Object} res - Express response object. Returns a message indicating success or failure of the deletion process.
