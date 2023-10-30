@@ -46,7 +46,9 @@ const createUser = asyncHandler(async (req, res) => {
 
   // Ideally, you should have more comprehensive input validation here or middleware to validate input
   if (!email) {
-    return res.status(400).json({ message: "Email is required." });
+    return res
+      .status(400)
+      .json({ success: false, message: "Email is required." });
   }
 
   try {
@@ -58,7 +60,7 @@ const createUser = asyncHandler(async (req, res) => {
     }
 
     // Create a new user
-    const newUser = await User.create({ email, ...otherData });
+    const newUser = await User.create({ email, address: {}, ...otherData });
 
     // Invalidate the cache for all users
     cache.del(allUsersKey);
@@ -111,6 +113,14 @@ const loginUser = asyncHandler(async (req, res) => {
       httpOnly: true,
       maxAge: 168 * 60 * 60 * 1000,
     });
+
+    // create an empty cart for the logged in user
+    let userCart = await Cart.findOne({ orderby: findUser._id });
+
+    if (!userCart) {
+      userCart = new Cart({ orderby: findUser._id });
+      await userCart.save();
+    }
     res.status(200).json({
       success: true,
       user: {
@@ -869,6 +879,11 @@ const saveAddress = asyncHandler(async (req, res) => {
 });
 
 /**
+ * @title User cart and orders functions
+ * @desc The functions below are for user cart and user orders
+ **/
+
+/**
  * @route POST /api/user/add-cart
  * @description Adds or updates the user's shopping cart after validating each product's existence and price.
  * The request body should contain an array of cart items, where each item has fields: _id (product ID), count, and color.
@@ -1023,12 +1038,15 @@ const updateUserCart = asyncHandler(async (req, res) => {
         .json({ success: false, message: "No cart found for this user" });
     }
 
+    const productIdsToAdd = productsToAdd.map((p) => p._id);
+    const products = await Product.find({ _id: { $in: productIdsToAdd } })
+      .select("price quantity color title")
+      .exec();
+
     const additionalProducts = [];
 
     for (let item of productsToAdd) {
-      const product = await Product.findById(item._id)
-        .select("price quantity color title")
-        .exec();
+      const product = products.find((p) => p._id.toString() === item._id);
 
       if (!product) {
         throw new Error(`Product with ID ${item._id} doesn't exist.`);
@@ -1089,15 +1107,7 @@ const updateUserCart = asyncHandler(async (req, res) => {
     return res.status(200).json({ success: true, data: existingCart });
   } catch (error) {
     // Depending on the error type, you can send different error responses
-    if (error.message.includes("Product with ID")) {
-      return res.status(404).json({ success: false, message: error.message });
-    }
-
-    if (error.message.includes("Only")) {
-      return res.status(400).json({ success: false, message: error.message });
-    }
-
-    if (error.message.includes("color")) {
+    if (error.message) {
       return res.status(400).json({ success: false, message: error.message });
     }
 
@@ -1135,7 +1145,7 @@ const getUserCart = asyncHandler(async (req, res) => {
   try {
     const cart = await Cart.findOne({ orderby: _id })
       .select("-__v")
-      .populate("products.product");
+      .populate("products.product", "-quantity -slug -__v");
     if (!cart) {
       return res
         .status(404)
@@ -1337,6 +1347,14 @@ const createOrder = asyncHandler(async (req, res) => {
     const user = await User.findById(userId);
     const userCart = await Cart.findOne({ orderby: userId });
 
+    if (!user.address || !user.address.city || !user.address.pincode) {
+      return res.status(404).json({
+        success: false,
+        message:
+          "Please complete your address details before processing the order",
+      });
+    }
+
     if (!userCart) {
       return res.status(404).json({
         success: false,
@@ -1362,7 +1380,7 @@ const createOrder = asyncHandler(async (req, res) => {
         currency: "inr",
       },
       orderby: userId,
-      orderStatus: "Cash On Delivery",
+      orderStatus: "Processing",
     }).save();
 
     // Update the product quantities and sales figures in the Product collection
@@ -1376,11 +1394,11 @@ const createOrder = asyncHandler(async (req, res) => {
     }));
     await Product.bulkWrite(bulkOperations);
 
-    // Once order is created successfully, remove the user's cart
-    await Cart.findByIdAndRemove(userCart._id);
-
-    // Update the user's cart reference to undefined
-    await User.findByIdAndUpdate(userId, { cart: undefined });
+    // Once order is created successfully, empty the user's cart
+    userCart.products = [];
+    userCart.cartTotal = 0;
+    userCart.totalAfterDiscount = userCart.cartTotal;
+    await userCart.save();
 
     res.status(201).json({
       success: true,

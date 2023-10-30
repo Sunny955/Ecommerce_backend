@@ -63,7 +63,7 @@ var userSchema = new mongoose.Schema(
     address: {
       lane1: {
         type: String,
-        required: [true, "Address lane 1 is required."],
+        // required: [true, "Address lane 1 is required."],
         trim: true,
         maxlength: [255, "Address lane 1 cannot exceed 255 characters."],
       },
@@ -74,27 +74,27 @@ var userSchema = new mongoose.Schema(
       },
       city: {
         type: String,
-        required: [true, "City is required."],
+        // required: [true, "City is required."],
         trim: true,
         maxlength: [100, "City name cannot exceed 100 characters."],
         match: [/^[a-zA-Z\s]*$/, "City should only consist of alphabets."],
       },
       district: {
         type: String,
-        required: [true, "District is required."],
+        // required: [true, "District is required."],
         trim: true,
         maxlength: [100, "District name cannot exceed 100 characters."],
         match: [/^[a-zA-Z\s]*$/, "District should only consist of alphabets."],
       },
       pincode: {
         type: String,
-        require: [true, "Pincode is required"],
+        // require: [true, "Pincode is required"],
         trim: true,
         match: [/^\d{6}$/, "Pincode should be a 6-digit number."],
       },
       country: {
         type: String,
-        required: [true, "Country is required."],
+        // required: [true, "Country is required."],
         trim: true,
         maxlength: [100, "Country name cannot exceed 100 characters."],
         match: [/^[a-zA-Z\s]*$/, "Country should only consist of alphabets."],
