@@ -232,7 +232,8 @@ const logoutUser = asyncHandler(async (req, res) => {
   // Clear the refreshToken cookie
   res.clearCookie("refreshToken", {
     httpOnly: true,
-    secure: true,
+    secure: true, // Set the secure flag for HTTPS
+    sameSite: "strict", // Setting it to 'strict' for maximum security
   });
 
   // Respond with 'No Content' status
