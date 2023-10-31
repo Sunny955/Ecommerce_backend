@@ -10,3 +10,5 @@ API took 5015.571583ms to respond. Route: GET /api/v1/user/get-info/ at 2023-10-
 API took 12314.13025ms to respond. Route: GET /api/v1/user/all-users at 2023-10-30T15:05:34.621Z
 API took 5014.812625ms to respond. Route: GET /api/v1/user/get-info at 2023-10-30T15:07:25.817Z
 API took 5207.349916ms to respond. Route: POST /api/v1/user/upload/user-pic at 2023-10-30T19:00:51.111Z
+API took 9088.249416ms to respond. Route: POST /api/v1/user/login at 2023-10-31T07:55:44.049Z
+API took 10028.117917ms to respond. Route: POST /api/v1/user/login at 2023-10-31T08:35:31.180Z

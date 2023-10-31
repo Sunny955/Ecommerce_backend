@@ -89,7 +89,7 @@ router.get(
   getAllUsers
 );
 router.get("/refresh", handleRefreshToken);
-router.get("/logout", logoutUser);
+router.get("/logout", authMiddleware, logoutUser);
 router.get("/get-wishlist", authMiddleware, cacheMiddleware(3600), getWishlist);
 router.put("/save-address", authMiddleware, saveAddress);
 router.get("/order/get-orders", authMiddleware, getOrders);
