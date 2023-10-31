@@ -35,7 +35,7 @@ app.use(xss());
 app.get("/", async (req, res) => {
   res
     .status(200)
-    .json({ success: false, data: "Hello you have reached the right place" });
+    .json({ success: true, data: "Hello you have reached the right place" });
 });
 
 app.use("/api/v1/user", authRouter);
