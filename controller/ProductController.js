@@ -72,10 +72,12 @@ const getaProduct = asyncHandler(async (req, res) => {
       .json({ success: false, message: "Invalid product ID format" });
   }
 
-  const product = await Product.findById(id).populate(
-    "ratings.postedby",
-    "-__v -refreshToken -passwordResetExpires -passwordResetToken -password -cart -wishlist -createdAt -updatedAt"
-  );
+  const product = await Product.findById(id)
+    .select("-quantity")
+    .populate(
+      "ratings.postedby",
+      "-__v -refreshToken -passwordResetExpires -passwordResetToken -password -cart -wishlist -createdAt -updatedAt"
+    );
 
   if (!product) {
     return res

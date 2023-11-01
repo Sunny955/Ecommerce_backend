@@ -30,7 +30,6 @@ router.get(
   "/get-a-product/:id",
   timeoutMiddleware(10000),
   authMiddleware,
-  isAdmin,
   cacheMiddleware(3600),
   getaProduct
 );
@@ -38,7 +37,6 @@ router.get(
   "/get-all-products",
   timeoutMiddleware(20000),
   authMiddleware,
-  isAdmin,
   advancedFiltering(Product),
   cacheMiddleware(3600),
   getAllProducts

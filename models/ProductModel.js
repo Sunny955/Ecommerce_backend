@@ -15,6 +15,7 @@ var productSchema = new mongoose.Schema(
       required: true,
       unique: true,
       lowercase: true,
+      select: false,
     },
     description: {
       type: String,
