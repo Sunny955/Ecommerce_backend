@@ -7,6 +7,7 @@ const morgan = require("morgan");
 const helmet = require("helmet");
 const xss = require("xss-clean");
 const logResponseTime = require("./middlewares/logResponseTime");
+const rootMessage = require("./utils/rootMessage");
 // require("newrelic");
 
 const authRouter = require("./routes/authRoutes");
@@ -32,11 +33,7 @@ app.use(cookieParser());
 app.use(helmet());
 app.use(xss());
 
-app.get("/", async (req, res) => {
-  res
-    .status(200)
-    .json({ success: true, data: "Hello you have reached the right place" });
-});
+app.use("/", rootMessage);
 
 app.use("/api/v1/user", authRouter);
 app.use("/api/v1/product", productRouter);
