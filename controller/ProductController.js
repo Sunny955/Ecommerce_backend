@@ -1,5 +1,7 @@
 const Product = require("../models/ProductModel");
 const User = require("../models/UserModel");
+const ProductCat = require("../models/ProductCategoryModel");
+const Brand = require("../models/BrandModel");
 const asyncHandler = require("express-async-handler");
 const slugify = require("slugify");
 const { validateMongoDbId } = require("../utils/reqValidations");
@@ -36,21 +38,49 @@ const createProduct = asyncHandler(async (req, res) => {
   // Create slug from title
   req.body.slug = slugify(title);
 
-  // Create the product
-  const newProduct = await Product.create(req.body);
+  try {
+    // Check if category exists
+    const category = req.body.category.toLowerCase();
+    const brand = req.body.brand.toLowerCase();
 
-  if (newProduct) {
-    // Invalidate cache after creating a new product
-    cache.del(keyGetAllProducts);
+    const categoryExists = await ProductCat.findOne({ title: category });
+    if (!categoryExists) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Given category does not exist" });
+    }
 
-    // Return the newly created product
-    return res.status(201).json({
-      success: true,
-      data: newProduct,
-      message: "Product created successfully",
+    // Check if brand exists
+    const brandExists = await Brand.findOne({ title: brand });
+    if (!brandExists) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Given brand does not exist" });
+    }
+
+    // Create the product
+    const newProduct = await Product.create(req.body);
+
+    if (newProduct) {
+      // Invalidate cache after creating a new product
+      cache.del(keyGetAllProducts);
+
+      // Return the newly created product
+      return res.status(201).json({
+        success: true,
+        data: newProduct,
+        message: "Product created successfully",
+      });
+    }
+    res.status(500).json({
+      success: false,
+      message: "Unable to add the product, please try again later",
     });
+  } catch (err) {
+    // Handle any errors that occur during database queries
+    console.error("Error occured", err.message);
+    res.status(500).json({ success: false, message: "Internal server error" });
   }
-  res.status(500).json({ success: false, message: "Internal server error" });
 });
 
 /**

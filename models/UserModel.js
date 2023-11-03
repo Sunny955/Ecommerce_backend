@@ -102,6 +102,7 @@ var userSchema = new mongoose.Schema(
       },
     },
     wishlist: [{ type: mongoose.Schema.Types.ObjectId, ref: "Product" }],
+    blogs: [{ type: mongoose.Schema.Types.ObjectId, ref: "Blog" }],
     refreshToken: {
       type: String,
     },

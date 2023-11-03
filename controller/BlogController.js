@@ -1,5 +1,6 @@
 const Blog = require("../models/BlogModel");
 const User = require("../models/UserModel");
+const BCategory = require("../models/BlogCategoryModel");
 const { validateMongoDbId } = require("../utils/reqValidations");
 const asyncHandler = require("express-async-handler");
 const { cache } = require("../middlewares/cacheMiddleware");
@@ -26,8 +27,37 @@ const fs = require("fs");
  * @returns {Object} JSON response with the newly created blog or an appropriate error message.
  */
 const createBlog = asyncHandler(async (req, res) => {
+  const { title, description, category } = req.body;
+
+  if (!title || !description || !category) {
+    return res.status(400).json({
+      success: false,
+      message: "Either of title, decription, category is missing",
+    });
+  }
+
   try {
+    const categoryExists = await BCategory.findOne({
+      title: category.toLowerCase(),
+    });
+
+    if (!categoryExists) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Given category doesn't exists" });
+    }
+
+    // Define the written_by field as an object and set user_id
+    req.body.written_by = { user_id: req.user._id };
+
     const newBlog = await Blog.create(req.body);
+
+    // Update the user's `blogs` field with the ID of the created blog
+    await User.findByIdAndUpdate(
+      req.user._id,
+      { $push: { blogs: newBlog._id } },
+      { new: true }
+    );
 
     // Invalidate all blogs cache
     cache.del(BLOGS_KEY);
@@ -35,9 +65,11 @@ const createBlog = asyncHandler(async (req, res) => {
     res.status(201).json({
       success: true,
       data: newBlog,
+      message: "Blog created successfully",
     });
   } catch (error) {
-    throw new Error(error);
+    console.log("error occured", error.message);
+    res.status(500).json({ success: false, message: "Internal server error" });
   }
 });
 
@@ -68,16 +100,43 @@ const updateBlog = asyncHandler(async (req, res) => {
   }
 
   try {
-    // Attempt to find and update the blog entry
+    // Attempt to find the blog entry
+    const existingBlog = await Blog.findById(id);
+
+    // Check if the blog was found
+    if (!existingBlog) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Blog not found." });
+    }
+
+    // Check if the user is authorized to update the blog
+    if (
+      req.user._id.toString() !== existingBlog.written_by.user_id.toString()
+    ) {
+      return res.status(403).json({
+        success: false,
+        message: "Not authorized to update this blog.",
+      });
+    }
+
+    if (req.body.category) {
+      // Check if the category exists
+      const categoryExists = await BCategory.findOne({
+        title: req.body.category.toLowerCase(),
+      });
+      if (!categoryExists) {
+        return res
+          .status(400)
+          .json({ success: false, message: "Given category doesn't exist" });
+      }
+    }
+
+    // Update the blog entry
     const updatedBlog = await Blog.findByIdAndUpdate(id, req.body, {
       new: true, // Return the updated object
-      runValidators: true, // Ensure updated fields meet the model's validation requirements
+      runValidators: true,
     });
-
-    // Check if the blog was found and updated
-    if (!updatedBlog) {
-      return res.status(404).json({ message: "Blog not found." });
-    }
 
     // Invalidate specific blog cache and all blogs cache
     cache.del(blogKey(id));
@@ -136,7 +195,8 @@ const getBlog = asyncHandler(async (req, res) => {
       .populate(
         "dislikes",
         "-__v -refreshToken -passwordResetExpires -passwordResetToken -password -wishlist -cart -createdAt -updatedAt"
-      );
+      )
+      .populate("written_by");
 
     // Check if the blog was found
     if (!blog) {
@@ -208,6 +268,15 @@ const deleteBlog = asyncHandler(async (req, res) => {
   try {
     // Attempt to find and delete the blog
     const deletedBlog = await Blog.findByIdAndDelete(id);
+
+    if (
+      deletedBlog?.written_by?.user_id.toString() !== req.user._id.toString()
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Not authorized to delete this blog",
+      });
+    }
 
     // Check if the blog was found and deleted
     if (!deletedBlog) {
@@ -408,6 +477,13 @@ const uploadImages = asyncHandler(async (req, res) => {
       .json({ success: false, message: "No files uploaded" });
   }
 
+  const blog = await Blog.findById(id);
+  if (blog?.written_by?.user_id.toString() !== req.user._id.toString()) {
+    return res
+      .status(403)
+      .json({ success: false, message: "Not authorize to update this blog" });
+  }
+
   try {
     const images = [];
     for (const file of req.files) {
@@ -481,10 +557,16 @@ const deleteImage = asyncHandler(async (req, res) => {
     });
   }
 
-  const blog = await Blog.findById(id).select("images");
+  const blog = await Blog.findById(id).select("images written_by");
 
   if (!blog) {
     return res.status(404).json({ success: false, message: "Blog not found" });
+  }
+
+  if (blog?.written_by?.user_id.toString() !== req.user._id.toString()) {
+    return res
+      .status(403)
+      .json({ success: false, message: "Not authorize to update this blog" });
   }
 
   const exists = blog?.images.some((image) => image.public_id === public_id);
@@ -526,6 +608,25 @@ const deleteImage = asyncHandler(async (req, res) => {
   }
 });
 
+const blogLoggedIn = asyncHandler(async (req, res) => {
+  const userId = req.user._id;
+
+  try {
+    const findBlogs = await Blog.find({ "written_by.user_id": userId });
+
+    if (!findBlogs || findBlogs.length === 0) {
+      return res
+        .status(400)
+        .json({ success: true, message: "No blogs written by the user" });
+    }
+
+    res.status(200).json({ success: true, data: findBlogs });
+  } catch (error) {
+    console.log("error occured", error.message);
+    res.status(500).json({ success: false, message: "Internal server error" });
+  }
+});
+
 module.exports = {
   createBlog,
   updateBlog,
@@ -536,4 +637,5 @@ module.exports = {
   dislikeBlog,
   uploadImages,
   deleteImage,
+  blogLoggedIn,
 };

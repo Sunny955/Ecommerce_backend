@@ -323,7 +323,7 @@ const getLoggedinUser = asyncHandler(async (req, res) => {
   try {
     const user = await User.findById(userId)
       .select("firstname lastname address wishlist cart pic mobile email")
-      .populate("cart wishlist")
+      .populate("cart wishlist blogs")
       .exec();
 
     if (!user) {

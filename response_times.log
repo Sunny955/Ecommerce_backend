@@ -13,3 +13,6 @@ API took 5207.349916ms to respond. Route: POST /api/v1/user/upload/user-pic at 2
 API took 9088.249416ms to respond. Route: POST /api/v1/user/login at 2023-10-31T07:55:44.049Z
 API took 10028.117917ms to respond. Route: POST /api/v1/user/login at 2023-10-31T08:35:31.180Z
 API took 11002.235792ms to respond. Route: GET /api/v1/product/get-all-products at 2023-11-01T15:37:02.484Z
+API took 5402.740542ms to respond. Route: GET /api/v1/blog/get-blog/654542ce26c3b7f535badfee at 2023-11-03T18:59:45.362Z
+API took 10009.449833ms to respond. Route: GET /api/v1/blog/get-blogs/user at 2023-11-03T19:29:16.335Z
+API took 5020.157584ms to respond. Route: GET /api/v1/user/get-info at 2023-11-03T19:35:21.703Z
