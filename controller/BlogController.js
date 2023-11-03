@@ -267,21 +267,21 @@ const deleteBlog = asyncHandler(async (req, res) => {
 
   try {
     // Attempt to find and delete the blog
-    const deletedBlog = await Blog.findByIdAndDelete(id);
+    const deleteBlog = await Blog.findById(id);
 
-    if (
-      deletedBlog?.written_by?.user_id.toString() !== req.user._id.toString()
-    ) {
+    // Check if the blog was found and deleted
+    if (!deleteBlog) {
+      return res.status(404).json({ message: "Blog not found." });
+    }
+
+    if (deleteBlog?.written_by?.user_id !== req.user._id) {
       return res.status(400).json({
         success: false,
         message: "Not authorized to delete this blog",
       });
     }
 
-    // Check if the blog was found and deleted
-    if (!deletedBlog) {
-      return res.status(404).json({ message: "Blog not found." });
-    }
+    const deletedBlog = await Blog.findByIdAndDelete(id);
 
     // Invalidate specific blog cache and all blogs cache
     cache.del(blogKey(id));
@@ -477,14 +477,21 @@ const uploadImages = asyncHandler(async (req, res) => {
       .json({ success: false, message: "No files uploaded" });
   }
 
-  const blog = await Blog.findById(id);
-  if (blog?.written_by?.user_id.toString() !== req.user._id.toString()) {
-    return res
-      .status(403)
-      .json({ success: false, message: "Not authorize to update this blog" });
-  }
-
   try {
+    const blog = await Blog.findById(id);
+
+    if (!blog) {
+      return res
+        .status(404)
+        .json({ success: false, message: "Blog not found" });
+    }
+
+    if (blog?.written_by?.user_id !== req.user._id) {
+      return res
+        .status(403)
+        .json({ success: false, message: "Not authorize to update this blog" });
+    }
+
     const images = [];
     for (const file of req.files) {
       if (fs.existsSync(file.path)) {
@@ -563,7 +570,7 @@ const deleteImage = asyncHandler(async (req, res) => {
     return res.status(404).json({ success: false, message: "Blog not found" });
   }
 
-  if (blog?.written_by?.user_id.toString() !== req.user._id.toString()) {
+  if (blog?.written_by?.user_id !== req.user._id) {
     return res
       .status(403)
       .json({ success: false, message: "Not authorize to update this blog" });
