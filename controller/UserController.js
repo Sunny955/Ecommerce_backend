@@ -56,7 +56,9 @@ const createUser = asyncHandler(async (req, res) => {
     const existingUser = await User.findOne({ email });
 
     if (existingUser) {
-      return res.status(400).json({ message: "User already exists!" });
+      return res
+        .status(400)
+        .json({ success: false, message: "User already exists!" });
     }
 
     // Create a new user
@@ -69,9 +71,7 @@ const createUser = asyncHandler(async (req, res) => {
   } catch (error) {
     // Ideally, we should send the error to a logger and provide a generic error message to the client.
     console.error(`Failed to create user: ${error.message}`);
-    res
-      .status(500)
-      .json({ message: "Internal server error.", error: error.message });
+    res.status(500).json({ success: false, message: "Internal server error." });
   }
 });
 
@@ -354,14 +354,18 @@ const deleteUser = asyncHandler(async (req, res, next) => {
 
   // Ensure the provided ID is a valid MongoDB ObjectID.
   if (!validateMongoDbId(id)) {
-    return res.status(400).json({ message: "Invalid user ID." });
+    return res
+      .status(400)
+      .json({ success: false, message: "Invalid user ID." });
   }
 
   try {
     const deletedUser = await User.findByIdAndDelete(_id);
 
     if (!deletedUser) {
-      return res.status(404).json({ message: "User not found." });
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found." });
     }
 
     // Invalidate the cache for the specific user
@@ -452,7 +456,7 @@ const updateUser = asyncHandler(async (req, res) => {
   }
 
   if (errors.length) {
-    return res.status(400).json({ message: errors.join(" ") });
+    return res.status(400).json({ success: false, message: errors.join(" ") });
   }
 
   const updates = { firstname, lastname, email, mobile };
@@ -463,7 +467,9 @@ const updateUser = asyncHandler(async (req, res) => {
     });
 
     if (!updatedUser) {
-      return res.status(404).json({ message: "User not found." });
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found." });
     }
 
     // Invalidate the cache for the specific user
@@ -472,14 +478,13 @@ const updateUser = asyncHandler(async (req, res) => {
     cache.del(allUsersKey);
 
     res.status(200).json({
+      success: true,
+      data: updatedUser,
       message: "User updated successfully.",
-      user: updatedUser,
     });
   } catch (error) {
     console.error(`Failed to update user: ${error.message}`);
-    res
-      .status(500)
-      .json({ message: "Internal server error.", error: error.message });
+    res.status(500).json({ success: false, message: "Internal server error." });
   }
 });
 
@@ -525,13 +530,15 @@ const blockUser = asyncHandler(async (req, res) => {
     cache.del(userKey);
     cache.del(allUsersKey);
 
-    res.status(200).json({ message: "User successfully blocked." }); // OK
+    res
+      .status(200)
+      .json({ success: true, message: "User successfully blocked." });
   } catch (error) {
     console.error(`Failed to block user: ${error.message}`);
     res.status(500).json({
       success: false,
-      message: "Failed to block user due to an internal error.",
-    }); // INTERNAL_SERVER_ERROR
+      message: "Internal server error",
+    });
   }
 });
 
@@ -553,7 +560,9 @@ const unblockUser = asyncHandler(async (req, res) => {
 
   // Validate MongoDB ID
   if (!validateMongoDbId(id)) {
-    return res.status(400).json({ message: "Invalid user ID." }); // BAD_REQUEST
+    return res
+      .status(400)
+      .json({ success: false, message: "Invalid user ID." }); // BAD_REQUEST
   }
 
   try {
@@ -581,13 +590,15 @@ const unblockUser = asyncHandler(async (req, res) => {
     cache.del(allUsersKey);
 
     // User was successfully unblocked
-    res.status(200).json({ message: "User successfully unblocked." }); // OK
+    res
+      .status(200)
+      .json({ success: true, message: "User successfully unblocked." });
   } catch (error) {
     console.error(`Failed to unblock user: ${error.message}`);
     res.status(500).json({
       success: false,
       message: "Failed to unblock user due to an internal error.",
-    }); // INTERNAL_SERVER_ERROR
+    });
   }
 });
 
@@ -601,7 +612,7 @@ const unblockUser = asyncHandler(async (req, res) => {
  * @throws {Error} Possible errors include invalid user ID, user not found, or missing new password in the request body.
  * @returns {Object} JSON response with a success message upon successful password update or an appropriate error message.
  */
-const updatePassword = asyncHandler(async (req, res, next) => {
+const updatePassword = asyncHandler(async (req, res) => {
   const { _id } = req.user;
   const { password } = req.body;
 
@@ -658,7 +669,9 @@ const forgotPasswordToken = asyncHandler(async (req, res) => {
   // 1. Check if the user exists for the provided email.
   const user = await User.findOne({ email });
   if (!user) {
-    return res.status(404).json({ message: "User not found with this email" });
+    return res
+      .status(404)
+      .json({ success: false, message: "User not found with this email" });
   }
 
   try {
@@ -698,7 +711,11 @@ const forgotPasswordToken = asyncHandler(async (req, res) => {
     // for security reasons. Instead, just inform the user that the email has been sent.
     res
       .status(200)
-      .json({ message: "Reset password email sent.", token: token });
+      .json({
+        success: true,
+        message: "Reset password email sent.",
+        token: token,
+      });
   } catch (error) {
     console.error("Error in forgotPasswordToken:", error);
     return res
@@ -723,12 +740,16 @@ const resetPassword = asyncHandler(async (req, res) => {
 
   // 1. Check for blank fields.
   if (!password || !confirmPassword) {
-    return res.status(400).json({ message: "Please fill in all fields." });
+    return res
+      .status(400)
+      .json({ success: false, message: "Please fill in all fields." });
   }
 
   // 2. Check if password and confirmPassword match.
   if (password !== confirmPassword) {
-    return res.status(400).json({ message: "Passwords are not the same." });
+    return res
+      .status(400)
+      .json({ success: false, message: "Passwords are not the same." });
   }
 
   // 3. Hash the provided token to match the hashed token stored in the database.
@@ -743,7 +764,10 @@ const resetPassword = asyncHandler(async (req, res) => {
   if (!user) {
     return res
       .status(400)
-      .json({ message: "Token expired or invalid. Please request a new one." });
+      .json({
+        success: false,
+        message: "Token expired or invalid. Please request a new one.",
+      });
   }
   // 5. Check if user added old password or new one
   const isSamePassword = await bcrypt.compare(password, user.password);
@@ -905,10 +929,10 @@ const saveAddress = asyncHandler(async (req, res) => {
       data: updatedUser,
     });
   } catch (error) {
+    console.log("error occurred", error.message);
     res.status(500).json({
       success: false,
-      message: "An error occurred while saving the address.",
-      error: error.message,
+      message: "Internal server error",
     });
   }
 });
