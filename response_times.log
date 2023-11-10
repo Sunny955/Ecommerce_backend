@@ -17,3 +17,5 @@ API took 5402.740542ms to respond. Route: GET /api/v1/blog/get-blog/654542ce26c3
 API took 10009.449833ms to respond. Route: GET /api/v1/blog/get-blogs/user at 2023-11-03T19:29:16.335Z
 API took 5020.157584ms to respond. Route: GET /api/v1/user/get-info at 2023-11-03T19:35:21.703Z
 API took 9459.531917ms to respond. Route: DELETE /api/v1/blog/delete-blog/652cea21ad202b93a225713b at 2023-11-03T19:53:22.962Z
+API took 10035.628959ms to respond. Route: POST /api/v1/enquiry/653f8f723ad91f7f12c5a173 at 2023-11-09T18:11:50.911Z
+API took 9277.056542ms to respond. Route: GET /api/v1/enquiry/user at 2023-11-09T19:35:23.776Z

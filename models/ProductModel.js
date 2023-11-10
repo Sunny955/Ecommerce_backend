@@ -89,6 +89,12 @@ var productSchema = new mongoose.Schema(
       type: String,
       default: 0,
     },
+    enquires: [
+      {
+        type: mongoose.Schema.ObjectId,
+        ref: "Enquiry",
+      },
+    ],
   },
   {
     id: false,

@@ -17,6 +17,7 @@ const blogCatRouter = require("./routes/blogCatRoute");
 const productCatRouter = require("./routes/prodCatRoute");
 const brandRouter = require("./routes/brandRoute");
 const couponRouter = require("./routes/couponRoute");
+const enquiryRouter = require("./routes/enquiryRoute");
 const { notFound, errorHandler } = require("./middlewares/errorHandler");
 
 const bodyParser = require("body-parser");
@@ -42,6 +43,7 @@ app.use("/api/v1/blog-cat", blogCatRouter);
 app.use("/api/v1/product-cat", productCatRouter);
 app.use("/api/v1/brand", brandRouter);
 app.use("/api/v1/coupon", couponRouter);
+app.use("/api/v1/enquiry", enquiryRouter);
 
 app.use(notFound);
 app.use(errorHandler);

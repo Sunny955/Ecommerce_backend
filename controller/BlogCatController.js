@@ -15,7 +15,9 @@ const { validateMongoDbId } = require("../utils/reqValidations");
 const createCategory = asyncHandler(async (req, res) => {
   // Validate request body data
   if (!req.body.title) {
-    return res.status(400).json({ message: "Category title is required" });
+    return res
+      .status(400)
+      .json({ success: false, message: "Category title is required" });
   }
 
   try {
@@ -29,11 +31,12 @@ const createCategory = asyncHandler(async (req, res) => {
     if (error.code === 11000 && error.keyPattern && error.keyPattern.title) {
       return res
         .status(400)
-        .json({ message: "Category title already exists!" });
+        .json({ success: false, message: "Category title already exists!" });
     }
     // Handle other errors
     error.message = "Error creating category";
-    res.status(500).json({ message: error.message });
+    console.log("error occurred", error.message);
+    res.status(500).json({ success: false, message: "Internal server error" });
   }
 });
 
@@ -50,7 +53,9 @@ const updateCategory = asyncHandler(async (req, res) => {
 
   // Validate MongoDB ID
   if (!validateMongoDbId(id)) {
-    return res.status(400).json({ message: "Invalid category ID" });
+    return res
+      .status(400)
+      .json({ success: false, message: "Invalid category ID" });
   }
 
   try {
@@ -60,15 +65,16 @@ const updateCategory = asyncHandler(async (req, res) => {
     // Check if category was found and updated
 
     if (!updatedCategory) {
-      return res.status(404).json({ message: "Category not found" });
+      return res
+        .status(404)
+        .json({ success: false, message: "Category not found" });
     }
 
     res.status(200).json({ success: true, data: updatedCategory });
   } catch (error) {
     // General error handling
-    res
-      .status(500)
-      .json({ success: false, message: "Error updating category" });
+    console.log("error occured", error.message);
+    res.status(500).json({ success: false, message: "Internal server error" });
   }
 });
 
@@ -142,9 +148,8 @@ const getCategory = asyncHandler(async (req, res) => {
     res.status(200).json({ success: true, data: category });
   } catch (error) {
     // Handle unexpected errors
-    res
-      .status(500)
-      .json({ success: false, message: "Error retrieving category" });
+    console.log("erorr occurred", error.message);
+    res.status(500).json({ success: false, message: "Internal server error" });
   }
 });
 
@@ -164,9 +169,7 @@ const getAllCategories = asyncHandler(async (req, res) => {
     res.status(200).json({ success: true, data: categories });
   } catch (error) {
     // Handle unexpected errors
-    res
-      .status(500)
-      .json({ success: false, message: "Error retrieving categories" });
+    res.status(500).json({ success: false, message: "Internal server error" });
   }
 });
 

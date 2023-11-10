@@ -286,8 +286,8 @@ const getaUser = asyncHandler(async (req, res) => {
 
   try {
     const user = await User.findById(id).populate(
-      "wishlist cart",
-      "-createdAt -updatedAt -__v -quantity"
+      "wishlist cart blogs enquiries",
+      "-createdAt -updatedAt -__v -quantity -name -email -mobile -user"
     );
     if (!user) {
       return res.status(404).json({
@@ -322,8 +322,13 @@ const getLoggedinUser = asyncHandler(async (req, res) => {
 
   try {
     const user = await User.findById(userId)
-      .select("firstname lastname address wishlist cart pic mobile email")
-      .populate("cart wishlist blogs")
+      .select(
+        "firstname lastname address wishlist cart pic mobile email enquiries"
+      )
+      .populate(
+        "cart wishlist blogs enquiries",
+        "-name -email -mobile -user -__v"
+      )
       .exec();
 
     if (!user) {
@@ -709,13 +714,11 @@ const forgotPasswordToken = asyncHandler(async (req, res) => {
 
     // Send a success response. It's better not to send the token in the response
     // for security reasons. Instead, just inform the user that the email has been sent.
-    res
-      .status(200)
-      .json({
-        success: true,
-        message: "Reset password email sent.",
-        token: token,
-      });
+    res.status(200).json({
+      success: true,
+      message: "Reset password email sent.",
+      token: token,
+    });
   } catch (error) {
     console.error("Error in forgotPasswordToken:", error);
     return res
@@ -762,12 +765,10 @@ const resetPassword = asyncHandler(async (req, res) => {
   });
 
   if (!user) {
-    return res
-      .status(400)
-      .json({
-        success: false,
-        message: "Token expired or invalid. Please request a new one.",
-      });
+    return res.status(400).json({
+      success: false,
+      message: "Token expired or invalid. Please request a new one.",
+    });
   }
   // 5. Check if user added old password or new one
   const isSamePassword = await bcrypt.compare(password, user.password);
@@ -1247,16 +1248,24 @@ const emptyCart = asyncHandler(async (req, res) => {
   }
 
   try {
-    // Find and remove the associated cart for the user
-    const removedCart = await Cart.findOneAndRemove({ orderby: userId });
+    // Find the associated cart for the user
+    const userCart = await Cart.findOne({ orderby: userId });
 
     // If there wasn't any cart associated with the user, inform the client
-    if (!removedCart) {
+    if (!userCart) {
       return res.status(404).json({
         success: false,
         message: "No cart associated with the user.",
       });
     }
+
+    // Empty the products in the cart and modify the price
+    userCart.products = [];
+    userCart.cartTotal = 0;
+    userCart.totalAfterDiscount = 0;
+
+    // Save the updated cart
+    await userCart.save();
 
     // Invalidate the cache for the specific user
     const userKey = `/api/user/${userId}`;
@@ -1264,8 +1273,8 @@ const emptyCart = asyncHandler(async (req, res) => {
 
     res.status(200).json({
       success: true,
-      data: removedCart,
-      message: "Items deleted from the cart successfully",
+      data: userCart,
+      message: "Products removed from the cart successfully",
     });
   } catch (error) {
     res.status(500).json({
