@@ -12,7 +12,7 @@ const {
   validateMongoDbId,
   validateStatus,
 } = require("../utils/reqValidations");
-const allUsersKey = "/api/user/all-users";
+const allUsersKey = "/api/v1/user/all-users";
 const { generateRefreshToken } = require("../config/refreshToken");
 const jwt = require("jsonwebtoken");
 const { sendEmail } = require("../controller/EmailController");
@@ -374,7 +374,7 @@ const deleteUser = asyncHandler(async (req, res, next) => {
     }
 
     // Invalidate the cache for the specific user
-    const userKey = `/api/user/${_id}`;
+    const userKey = `/api/v1/user/${_id}`;
     cache.del(userKey);
     cache.del(allUsersKey);
 
@@ -478,7 +478,7 @@ const updateUser = asyncHandler(async (req, res) => {
     }
 
     // Invalidate the cache for the specific user
-    const userKey = `/api/user/${_id}`;
+    const userKey = `/api/v1/user/${_id}`;
     cache.del(userKey);
     cache.del(allUsersKey);
 
@@ -531,7 +531,7 @@ const blockUser = asyncHandler(async (req, res) => {
     }
 
     // Invalidate the cache for the specific user
-    const userKey = `/api/user/${id}`;
+    const userKey = `/api/v1/user/${id}`;
     cache.del(userKey);
     cache.del(allUsersKey);
 
@@ -590,7 +590,7 @@ const unblockUser = asyncHandler(async (req, res) => {
     }
 
     // Invalidate the cache for the specific user
-    const userKey = `/api/user/${id}`;
+    const userKey = `/api/v1/user/${id}`;
     cache.del(userKey);
     cache.del(allUsersKey);
 
@@ -640,7 +640,7 @@ const updatePassword = asyncHandler(async (req, res) => {
     await user.save();
 
     // Invalidate the cache for the specific user
-    const userKey = `/api/user/${_id}`;
+    const userKey = `/api/v1/user/${_id}`;
     cache.del(userKey);
     cache.del(allUsersKey);
 
@@ -699,7 +699,7 @@ const forgotPasswordToken = asyncHandler(async (req, res) => {
         Hi,
         Please follow this link to reset your password.
         This link is valid for 10 minutes from now.
-        <a href='http://localhost:3000/api/user/reset-password/${token}'>Click Here</a>
+        <a href='http://localhost:3000/api/v1/user/reset-password/${token}'>Click Here</a>
       `;
 
     const emailData = {
@@ -921,7 +921,7 @@ const saveAddress = asyncHandler(async (req, res) => {
     }
 
     // Invalidate the cache for the specific user
-    const userKey = `/api/user/${userId}`;
+    const userKey = `/api/v1/user/${userId}`;
     cache.del(userKey);
     cache.del(allUsersKey);
 
@@ -1041,7 +1041,7 @@ const userCart = asyncHandler(async (req, res) => {
     await User.updateOne({ _id: userId }, { $set: { cart: newCart._id } });
 
     // Invalidate the cache for the specific user
-    const userKey = `/api/user/${userId}`;
+    const userKey = `/api/v1/user/${userId}`;
     cache.del(userKey);
 
     return res.status(201).json({ success: true, data: newCart });
@@ -1161,7 +1161,7 @@ const updateUserCart = asyncHandler(async (req, res) => {
     await existingCart.save();
 
     // Invalidate the cache for the specific user
-    const userKey = `/api/user/${userId}`;
+    const userKey = `/api/v1/user/${userId}`;
     cache.del(userKey);
 
     return res.status(200).json({ success: true, data: existingCart });
@@ -1268,7 +1268,7 @@ const emptyCart = asyncHandler(async (req, res) => {
     await userCart.save();
 
     // Invalidate the cache for the specific user
-    const userKey = `/api/user/${userId}`;
+    const userKey = `/api/v1/user/${userId}`;
     cache.del(userKey);
 
     res.status(200).json({
@@ -1357,7 +1357,7 @@ const applyCoupon = asyncHandler(async (req, res) => {
     }
 
     // Invalidate the cache for the specific user
-    const userKey = `/api/user/${userId}`;
+    const userKey = `/api/v1/user/${userId}`;
     cache.del(userKey);
 
     res.status(200).json({
@@ -1787,7 +1787,7 @@ const uploadPic = asyncHandler(async (req, res) => {
         .json({ success: false, message: "User not found" });
     }
 
-    const userKey = `/api/user/${_id}`;
+    const userKey = `/api/v1/user/${_id}`;
     cache.del(userKey);
 
     res.json({ success: true, data: updatedUser });
@@ -1846,7 +1846,7 @@ const deletePic = asyncHandler(async (req, res) => {
       });
 
       // Invalidate the user's cache
-      const userKey = `/api/user/${_id}`;
+      const userKey = `/api/v1/user/${_id}`;
       cache.del(userKey);
 
       // Respond with a success message

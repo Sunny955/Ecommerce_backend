@@ -4,8 +4,8 @@ const BCategory = require("../models/BlogCategoryModel");
 const { validateMongoDbId } = require("../utils/reqValidations");
 const asyncHandler = require("express-async-handler");
 const { cache } = require("../middlewares/cacheMiddleware");
-const BLOGS_KEY = "/api/blog/all-blogs";
-const blogKey = (id) => `/api/blog/get-blog/${id}`;
+const BLOGS_KEY = "/api/v1/blog/all-blogs";
+const blogKey = (id) => `/api/v1/blog/get-blog/${id}`;
 const {
   cloudinaryUploadImg,
   cloudinaryDeleteImg,

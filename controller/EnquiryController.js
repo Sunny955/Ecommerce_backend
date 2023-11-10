@@ -4,8 +4,8 @@ const User = require("../models/UserModel");
 const asyncHandler = require("express-async-handler");
 const { validateMongoDbId } = require("../utils/reqValidations");
 const { cache } = require("../middlewares/cacheMiddleware");
-const keyGetAllProducts = "/api/product/get-all-products";
-const allUsersKey = "/api/user/all-users";
+const keyGetAllProducts = "/api/v1/product/get-all-products";
+const allUsersKey = "/api/v1/user/all-users";
 /**
  * @route POST /api/enquiry/:product_id
  * @description Create a new enquiry in the database using the data provided in the request body.
@@ -77,13 +77,13 @@ const createEnquiry = asyncHandler(async (req, res) => {
     );
 
     // Invalidate the cache for the specific user
-    const userKey = `/api/user/${_id}`;
+    const userKey = `/api/v1/user/${_id}`;
     cache.del(userKey);
     cache.del(allUsersKey);
 
     // Invalidate cache after updating a product
     cache.del(keyGetAllProducts);
-    cache.del(`/api/product/get-a-product/${product_id}`);
+    cache.del(`/api/v1/product/get-a-product/${product_id}`);
 
     return res.status(201).json({
       success: true,
@@ -130,17 +130,17 @@ const updateEnquiry = asyncHandler(async (req, res) => {
         .status(404)
         .json({ success: false, message: "Enquiry not found" });
     }
-    const _id = updateEnquiry.user;
-    const product_id = updateEnquiry.product;
+    const userId = updatedEnquiry.user.toString();
+    const product_id = updatedEnquiry.product.toString();
 
     // Invalidate the cache for the specific user
-    const userKey = `/api/user/${_id}`;
+    const userKey = `/api/v1/user/${userId}`;
     cache.del(userKey);
     cache.del(allUsersKey);
 
     // Invalidate cache after updating a product
     cache.del(keyGetAllProducts);
-    cache.del(`/api/product/get-a-product/${product_id}`);
+    cache.del(`/api/v1/product/get-a-product/${product_id}`);
 
     res.status(200).json({ success: true, data: updatedEnquiry });
   } catch (error) {
@@ -178,30 +178,30 @@ const deleteEnquiry = asyncHandler(async (req, res) => {
     }
 
     // Delete the reference from the User model
-    await User.findByIdAndUpdate(
+    const updated_user = await User.findByIdAndUpdate(
       deletedEnquiry.user,
       { $pull: { enquiries: id } },
       { new: true }
     );
 
     // Delete the reference from the Product model
-    await Product.findByIdAndUpdate(
+    const updated_product = await Product.findByIdAndUpdate(
       deletedEnquiry.product,
       { $pull: { enquiries: id } },
       { new: true }
     );
 
-    const _id = deleteEnquiry.user;
-    const product_id = deleteEnquiry.product;
+    const _id = updated_user._id;
+    const product_id = updated_product._id;
 
     // Invalidate the cache for the specific user
-    const userKey = `/api/user/${_id}`;
+    const userKey = `/api/v1/user/${_id}`;
     cache.del(userKey);
     cache.del(allUsersKey);
 
     // Invalidate cache after updating a product
     cache.del(keyGetAllProducts);
-    cache.del(`/api/product/get-a-product/${product_id}`);
+    cache.del(`/api/v1/product/get-a-product/${product_id}`);
 
     res.status(200).json({ success: true, data: deletedEnquiry });
   } catch (error) {

@@ -5,7 +5,7 @@ const Brand = require("../models/BrandModel");
 const asyncHandler = require("express-async-handler");
 const slugify = require("slugify");
 const { validateMongoDbId } = require("../utils/reqValidations");
-const keyGetAllProducts = "/api/product/get-all-products";
+const keyGetAllProducts = "/api/v1/product/get-all-products";
 const { cache } = require("../middlewares/cacheMiddleware");
 const {
   cloudinaryUploadImg,
@@ -84,7 +84,7 @@ const createProduct = asyncHandler(async (req, res) => {
 });
 
 /**
- * @route GET /api/product/get-a-product/:id
+ * @route GET /api/v1/product/get-a-product/:id
  * @description Retrieves a specific product from the system based on the provided product ID in the route parameters.
  * It will validate the MongoDB ID format, and if it's incorrect, an error message will be returned. If the product does not exist,
  * an appropriate "not found" message will be sent back to the client.
@@ -105,8 +105,8 @@ const getaProduct = asyncHandler(async (req, res) => {
   const product = await Product.findById(id)
     .select("-quantity")
     .populate(
-      "ratings.postedby",
-      "-__v -refreshToken -passwordResetExpires -passwordResetToken -password -cart -wishlist -createdAt -updatedAt"
+      "ratings.postedby enquiries",
+      "-__v -refreshToken -passwordResetExpires -passwordResetToken -password -cart -wishlist -createdAt -updatedAt -product"
     );
 
   if (!product) {
@@ -119,7 +119,7 @@ const getaProduct = asyncHandler(async (req, res) => {
 });
 
 /**
- * @route GET /api/product/get-all-products
+ * @route GET /api/v1/product/get-all-products
  * @description Retrieves all products from the system. If no products are available, it will return a message indicating so.
  * The function does not require any specific input from the request body, and will return a list of all available products.
  * @param {Object} req - Express request object.
@@ -191,7 +191,7 @@ const updateProduct = asyncHandler(async (req, res) => {
 
     // Invalidate cache after updating a product
     cache.del(keyGetAllProducts);
-    cache.del(`/api/product/get-a-product/${id}`);
+    cache.del(`/api/v1/product/get-a-product/${id}`);
 
     res.status(200).json({
       success: true,
@@ -242,7 +242,7 @@ const deleteProduct = asyncHandler(async (req, res) => {
 
     // Invalidate cache after deleting a product
     cache.del(keyGetAllProducts);
-    cache.del(`/api/product/get-a-product/${id}`);
+    cache.del(`/api/v1/product/get-a-product/${id}`);
 
     res.status(200).json({
       success: true,
@@ -306,7 +306,7 @@ const addToWishlist = asyncHandler(async (req, res) => {
 
     // Invalidate cache after updating a product
     cache.del(keyGetAllProducts);
-    cache.del(`/api/product/get-a-product/${prodId}`);
+    cache.del(`/api/v1/product/get-a-product/${prodId}`);
 
     // Return a success response with the updated user and message
     res.json({
@@ -397,7 +397,7 @@ const rating = asyncHandler(async (req, res) => {
     }
     // Invalidate cache after updating a product
     cache.del(keyGetAllProducts);
-    cache.del(`/api/product/get-a-product/${prodId}`);
+    cache.del(`/api/v1/product/get-a-product/${prodId}`);
 
     // Return a success response
     res.status(200).json({
@@ -457,7 +457,7 @@ const updateAverageRating = asyncHandler(async (req, res) => {
 
     // Invalidate cache after updating a product
     cache.del(keyGetAllProducts);
-    cache.del(`/api/product/get-a-product/${prodId}`);
+    cache.del(`/api/v1/product/get-a-product/${prodId}`);
 
     // Return the updated product
     res.status(200).json({ success: true, data: updatedProduct });
@@ -523,7 +523,7 @@ const uploadImages = asyncHandler(async (req, res) => {
 
     // Invalidate cache after updating a product
     cache.del(keyGetAllProducts);
-    cache.del(`/api/product/get-a-product/${id}`);
+    cache.del(`/api/v1/product/get-a-product/${id}`);
 
     res.json({ success: true, data: updatedProduct });
   } catch (error) {
@@ -535,7 +535,7 @@ const uploadImages = asyncHandler(async (req, res) => {
 });
 
 /**
- * @route PUT api/produtc/delete-image/:id
+ * @route PUT api/product/delete-image/:id
  * @description Delete a specific image associated with a product from Cloudinary and update the product's image array in the database. Requires the public_id of the image to be passed in the request body.
  * @param {Object} req - Express request object, expects product ID in params and the image's public_id in the body.
  * @param {Object} res - Express response object. Returns a message indicating success or failure of the deletion process.
@@ -584,7 +584,7 @@ const deleteImage = asyncHandler(async (req, res) => {
 
       // Invalidate cache after updating a product
       cache.del(keyGetAllProducts);
-      cache.del(`/api/product/get-a-product/${id}`);
+      cache.del(`/api/v1/product/get-a-product/${id}`);
 
       res.json({
         success: true,

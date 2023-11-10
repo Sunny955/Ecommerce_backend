@@ -89,9 +89,9 @@ var productSchema = new mongoose.Schema(
       type: String,
       default: 0,
     },
-    enquires: [
+    enquiries: [
       {
-        type: mongoose.Schema.ObjectId,
+        type: mongoose.Schema.Types.ObjectId,
         ref: "Enquiry",
       },
     ],
