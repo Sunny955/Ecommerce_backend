@@ -104,6 +104,7 @@ var userSchema = new mongoose.Schema(
     wishlist: [{ type: mongoose.Schema.Types.ObjectId, ref: "Product" }],
     blogs: [{ type: mongoose.Schema.Types.ObjectId, ref: "Blog" }],
     enquiries: [{ type: mongoose.Schema.Types.ObjectId, ref: "Enquiry" }],
+    orders: [{ type: mongoose.Schema.Types.ObjectId, ref: "Order" }],
     refreshToken: {
       type: String,
     },

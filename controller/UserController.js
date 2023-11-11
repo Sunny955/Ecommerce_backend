@@ -286,8 +286,8 @@ const getaUser = asyncHandler(async (req, res) => {
 
   try {
     const user = await User.findById(id).populate(
-      "wishlist cart blogs enquiries",
-      "-createdAt -updatedAt -__v -quantity -name -email -mobile -user"
+      "wishlist cart blogs enquiries orders",
+      "-createdAt -updatedAt -__v -quantity -name -email -mobile -user -orderby"
     );
     if (!user) {
       return res.status(404).json({
@@ -326,8 +326,8 @@ const getLoggedinUser = asyncHandler(async (req, res) => {
         "firstname lastname address wishlist cart pic mobile email enquiries"
       )
       .populate(
-        "cart wishlist blogs enquiries",
-        "-name -email -mobile -user -__v"
+        "cart wishlist blogs enquiries orders",
+        "-name -email -mobile -user -__v -orderby"
       )
       .exec();
 
@@ -1438,10 +1438,10 @@ const createOrder = asyncHandler(async (req, res) => {
       });
     }
 
-    if (!userCart) {
+    if (!userCart || userCart.cartTotal === 0) {
       return res.status(404).json({
         success: false,
-        message: "No cart associated with the user.",
+        message: "Your cart is empty",
       });
     }
 
@@ -1466,6 +1466,8 @@ const createOrder = asyncHandler(async (req, res) => {
       orderStatus: "Processing",
     }).save();
 
+    await User.updateOne({ _id: userId }, { $push: { orders: newOrder._id } });
+
     // Update the product quantities and sales figures in the Product collection
     const bulkOperations = userCart.products.map((item) => ({
       updateOne: {
@@ -1477,11 +1479,14 @@ const createOrder = asyncHandler(async (req, res) => {
     }));
     await Product.bulkWrite(bulkOperations);
 
-    // Once order is created successfully, empty the user's cart
+    // Once the order is created successfully, empty the user's cart
     userCart.products = [];
     userCart.cartTotal = 0;
     userCart.totalAfterDiscount = userCart.cartTotal;
     await userCart.save();
+
+    const userKey = `/api/v1/user/${userId}`;
+    cache.del(userKey);
 
     res.status(201).json({
       success: true,
@@ -1492,7 +1497,7 @@ const createOrder = asyncHandler(async (req, res) => {
     console.error(`Error occurred while creating order: ${error.message}`);
     res.status(500).json({
       success: false,
-      message: "Failed to create order",
+      message: "Internal server error",
     });
   }
 });
