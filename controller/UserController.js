@@ -510,7 +510,9 @@ const blockUser = asyncHandler(async (req, res) => {
   const { id } = req.params;
 
   if (!validateMongoDbId(id)) {
-    return res.status(400).json({ message: "Invalid user ID." }); // BAD_REQUEST
+    return res
+      .status(400)
+      .json({ success: false, message: "Invalid user ID." });
   }
 
   try {
@@ -527,7 +529,7 @@ const blockUser = asyncHandler(async (req, res) => {
     if (!blockusr) {
       return res
         .status(404)
-        .json({ success: false, message: "User not found." }); // NOT_FOUND
+        .json({ success: false, message: "User not found." });
     }
 
     // Invalidate the cache for the specific user
@@ -567,7 +569,7 @@ const unblockUser = asyncHandler(async (req, res) => {
   if (!validateMongoDbId(id)) {
     return res
       .status(400)
-      .json({ success: false, message: "Invalid user ID." }); // BAD_REQUEST
+      .json({ success: false, message: "Invalid user ID." });
   }
 
   try {
@@ -693,13 +695,26 @@ const forgotPasswordToken = asyncHandler(async (req, res) => {
         passwordResetExpires: user.passwordResetExpires,
       }
     );
+    // Get the current environment
+    const environment = process.env.NODE_ENV || "development";
+
+    // Base URL for the reset link
+    let baseURL;
+
+    // Set the baseURL based on the environment
+    if (environment === "production") {
+      baseURL = process.env.PROD_URL;
+    } else {
+      // Default to localhost for development and any other unknown environment
+      baseURL = "http://localhost:3000";
+    }
 
     // 3. Create the reset URL and structure the email content.
     const resetURL = `
         Hi,
         Please follow this link to reset your password.
         This link is valid for 10 minutes from now.
-        <a href='http://localhost:3000/api/v1/user/reset-password/${token}'>Click Here</a>
+        <a href='${baseURL}/api/v1/user/reset-password/${token}'>Click Here</a>
       `;
 
     const emailData = {

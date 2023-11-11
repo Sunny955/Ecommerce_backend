@@ -19,29 +19,30 @@ const createEnquiry = asyncHandler(async (req, res) => {
   const { _id, firstname, lastname, email, mobile } = req?.user;
   const { comment } = req.body;
 
-  if (!product_id) {
-    return res
-      .status(400)
-      .json({ success: false, message: "Please provide a product id" });
-  }
-
-  if (!comment || comment.length === 0) {
-    return res
-      .status(400)
-      .json({ success: false, message: "Comment not provided, please add" });
-  }
-
-  const findProduct = await Product.findById(product_id);
-
-  if (!findProduct) {
-    return res
-      .status(400)
-      .json({ success: false, message: "Enter a valid product id" });
-  }
-
   try {
+    // Validation checks
+    if (!product_id || !validateMongoDbId(product_id)) {
+      return res.status(400).json({
+        success: false,
+        message: "Please provide a valid product id",
+      });
+    }
+
+    if (!comment || comment.length === 0) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Comment is required" });
+    }
+
+    const findProduct = await Product.findById(product_id);
+    if (!findProduct) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Enter a valid product id" });
+    }
+
     // Create a new enquiry
-    let name = firstname + " " + lastname;
+    let name = `${firstname} ${lastname}`;
     const newEnquiry = new Enquiry({
       name,
       email,
@@ -51,32 +52,27 @@ const createEnquiry = asyncHandler(async (req, res) => {
       comment,
     });
 
-    // Run validators
-    const validationError = newEnquiry.validateSync();
-    if (validationError) {
-      return res.status(400).json({
-        success: false,
-        message: "Fields enetered incorretly validation fails",
-      });
-    }
+    // Validate the new enquiry
+    await newEnquiry.validate();
 
-    // Save the enquiry if validation passes
+    // Save the enquiry
     await newEnquiry.save();
 
-    // Update the User model with the new enquiry's reference
-    const updatedUser = await User.findByIdAndUpdate(
-      _id,
-      { $push: { enquiries: newEnquiry._id } },
-      { new: true }
-    );
-    // Update the Product model with the new enquiry's reference
-    const updatedProduct = await Product.findByIdAndUpdate(
-      product_id,
-      { $push: { enquiries: newEnquiry._id } },
-      { new: true }
-    );
+    // Update User and Product models with the new enquiry's reference
+    const [updatedUser, updatedProduct] = await Promise.all([
+      User.findByIdAndUpdate(
+        _id,
+        { $push: { enquiries: newEnquiry._id } },
+        { new: true }
+      ),
+      Product.findByIdAndUpdate(
+        product_id,
+        { $push: { enquiries: newEnquiry._id } },
+        { new: true }
+      ),
+    ]);
 
-    // Invalidate the cache for the specific user
+    // Invalidate cache for the specific user
     const userKey = `/api/v1/user/${_id}`;
     cache.del(userKey);
     cache.del(allUsersKey);
@@ -91,10 +87,11 @@ const createEnquiry = asyncHandler(async (req, res) => {
       message: "New enquiry for the product is created",
     });
   } catch (error) {
-    console.error(error);
-    return res
-      .status(500)
-      .json({ success: false, message: "Failed to create an enquiry" });
+    console.error("error occurred", error.message);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error",
+    });
   }
 });
 
@@ -145,9 +142,7 @@ const updateEnquiry = asyncHandler(async (req, res) => {
     res.status(200).json({ success: true, data: updatedEnquiry });
   } catch (error) {
     console.error(error);
-    res
-      .status(500)
-      .json({ success: false, message: "Failed to update the enquiry" });
+    res.status(500).json({ success: false, message: "Internal server error" });
   }
 });
 
@@ -206,9 +201,7 @@ const deleteEnquiry = asyncHandler(async (req, res) => {
     res.status(200).json({ success: true, data: deletedEnquiry });
   } catch (error) {
     console.error(error);
-    res
-      .status(500)
-      .json({ success: false, message: "Failed to delete the enquiry" });
+    res.status(500).json({ success: false, message: "Internal server error" });
   }
 });
 
@@ -239,9 +232,7 @@ const getEnquiry = asyncHandler(async (req, res) => {
     res.status(200).json(foundEnquiry);
   } catch (error) {
     console.error("error occured", error);
-    res
-      .status(500)
-      .json({ success: false, message: "Failed to retrieve the enquiry" });
+    res.status(500).json({ success: false, message: "Internal server error" });
   }
 });
 
@@ -259,9 +250,7 @@ const getallEnquiry = asyncHandler(async (req, res) => {
     res.status(200).json({ success: true, data: allEnquiries });
   } catch (error) {
     console.error(error);
-    res
-      .status(500)
-      .json({ success: false, error: "Failed to retrieve enquiries" });
+    res.status(500).json({ success: false, error: "Internal server error" });
   }
 });
 
@@ -289,9 +278,7 @@ const getEnquiriesByUser = asyncHandler(async (req, res) => {
     res.status(200).json({ success: true, data: userEnquiries });
   } catch (error) {
     console.error("error occurred", error.message);
-    res
-      .status(500)
-      .json({ success: false, error: "Failed to retrieve user's enquiries" });
+    res.status(500).json({ success: false, error: "Internal server error" });
   }
 });
 
