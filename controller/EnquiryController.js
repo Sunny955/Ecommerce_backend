@@ -1,6 +1,7 @@
 const Enquiry = require("../models/EnquiryModel");
 const Product = require("../models/ProductModel");
 const User = require("../models/UserModel");
+const Order = require("../models/OrderModel");
 const asyncHandler = require("express-async-handler");
 const { validateMongoDbId } = require("../utils/reqValidations");
 const { cache } = require("../middlewares/cacheMiddleware");
@@ -39,6 +40,21 @@ const createEnquiry = asyncHandler(async (req, res) => {
       return res
         .status(400)
         .json({ success: false, message: "Enter a valid product id" });
+    }
+
+    // Check if the user has ordered the specified product
+    const hasOrderedProduct = await Order.exists({
+      orderby: _id,
+      "products.product": product_id,
+      orderStatus: { $in: ["Delivered"] },
+    });
+
+    if (!hasOrderedProduct) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "You can only raise an enquiry for products you have ordered and get delivered",
+      });
     }
 
     // Create a new enquiry

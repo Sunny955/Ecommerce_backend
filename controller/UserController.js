@@ -1684,6 +1684,13 @@ const updateOrderStatus = asyncHandler(async (req, res) => {
     });
   }
 
+  if (!orderStatus || !paymentStatus) {
+    return res.status(400).json({
+      success: false,
+      message: "Enter order-status and payment-status",
+    });
+  }
+
   const validStatuses = [
     "not processed",
     "in transit",
@@ -1723,7 +1730,7 @@ const updateOrderStatus = asyncHandler(async (req, res) => {
       id,
       {
         orderStatus: Status,
-        "paymentIntent.status": paymentStatusFormatted, // directly update the nested field
+        "paymentIntent.status": paymentStatusFormatted,
       },
       { new: true, runValidators: true }
     );
