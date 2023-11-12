@@ -5,7 +5,7 @@ const { validateMongoDbId } = require("../utils/reqValidations");
 // // for every route put v1 after api like: api/v1/coupon/...
 
 /**
- * @route POST api/coupon/create
+ * @route POST api/v1/coupon/create
  * @description Create a new coupon in the database. The function expects the 'name', 'discount', and 'expiry' fields in the request body. The 'name' is transformed to uppercase, and several validations are enforced by the Coupon schema in the database.
  * @param {Object} req - Express request object. Expected to contain 'name', 'discount', and 'expiry' fields in the body.
  * @param {Object} res - Express response object. Returns the newly created coupon details or an appropriate error message.
@@ -54,7 +54,7 @@ const createCoupon = asyncHandler(async (req, res) => {
 });
 
 /**
- * @route GET api/coupon/get-all
+ * @route GET api/v1/coupon/get-all
  * @description Retrieve all coupons from the database.
  * @param {Object} req - Express request object.
  * @param {Object} res - Express response object. Returns a list of all coupons or an appropriate error message.
@@ -77,7 +77,7 @@ const getAllCoupons = asyncHandler(async (req, res) => {
 });
 
 /**
- * @route PUT api/coupon/update-coupon/:id
+ * @route PUT api/v1/coupon/update-coupon/:id
  * @description Update a specific coupon's details in the database.
  * @param {Object} req - Express request object. Contains the ID of the coupon in route parameters and the updated data in the body.
  * @param {Object} res - Express response object. Returns the updated coupon details or an appropriate error message.
@@ -116,7 +116,7 @@ const updateCoupon = asyncHandler(async (req, res) => {
 });
 
 /**
- * @route DELETE api/coupon/delete-coupon/:id
+ * @route DELETE api/v1/coupon/delete-coupon/:id
  * @description Delete a specific coupon from the database.
  * @param {Object} req - Express request object. Contains the ID of the coupon in route parameters.
  * @param {Object} res - Express response object. Returns a success message or an appropriate error message.
@@ -156,7 +156,7 @@ const deleteCoupon = asyncHandler(async (req, res) => {
 });
 
 /**
- * @route GET api/coupon/get-coupon/:id
+ * @route GET api/v1/coupon/get-coupon/:id
  * @description Retrieve a specific coupon from the database based on its ID.
  * @param {Object} req - Express request object. Contains the ID of the coupon in route parameters.
  * @param {Object} res - Express response object. Returns the requested coupon or an appropriate error message.

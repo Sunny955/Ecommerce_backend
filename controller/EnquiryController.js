@@ -8,7 +8,7 @@ const { cache } = require("../middlewares/cacheMiddleware");
 const keyGetAllProducts = "/api/v1/product/get-all-products";
 const allUsersKey = "/api/v1/user/all-users";
 /**
- * @route POST /api/enquiry/:product_id
+ * @route POST /api/v1/enquiry/:product_id
  * @description Create a new enquiry in the database using the data provided in the request body.
  * @param {Object} req - Express request object. Expected to have the enquiry details in the body.
  * @param {Object} res - Express response object. Will return the newly created enquiry's details or an appropriate error message.
@@ -112,7 +112,7 @@ const createEnquiry = asyncHandler(async (req, res) => {
 });
 
 /**
- * @route PUT /api/enquiry/:id
+ * @route PUT /api/v1/enquiry/:id
  * @description Update an existing enquiry by ID using the data provided in the request body.
  * @param {Object} req - Express request object. Expected to have the updated enquiry details in the body.
  * @param {Object} res - Express response object. Will return the updated enquiry's details or an appropriate error message.
@@ -163,7 +163,7 @@ const updateEnquiry = asyncHandler(async (req, res) => {
 });
 
 /**
- * @route DELETE /api/enquiry/:id
+ * @route DELETE /api/v1/enquiry/:id
  * @description Delete an existing enquiry by ID.
  * @param {Object} req - Express request object. Expected to have the enquiry ID in the request parameters.
  * @param {Object} res - Express response object. Will return the deleted enquiry's details or an appropriate error message.
@@ -222,7 +222,7 @@ const deleteEnquiry = asyncHandler(async (req, res) => {
 });
 
 /**
- * @route GET /api/enquiry/get-inquiry/:id
+ * @route GET /api/v1/enquiry/get-inquiry/:id
  * @description Get an enquiry by ID.
  * @param {Object} req - Express request object. Expected to have the enquiry ID in the request parameters.
  * @param {Object} res - Express response object. Will return the found enquiry's details or an appropriate error message.
@@ -253,7 +253,7 @@ const getEnquiry = asyncHandler(async (req, res) => {
 });
 
 /**
- * @route GET /api/enquiry
+ * @route GET /api/v1/enquiry
  * @description Get a list of all enquiries.
  * @param {Object} req - Express request object. No additional parameters required.
  * @param {Object} res - Express response object. Will return a list of all enquiries or an appropriate error message.
@@ -271,7 +271,7 @@ const getallEnquiry = asyncHandler(async (req, res) => {
 });
 
 /**
- * @route GET /api/enquiry/user
+ * @route GET /api/v1/enquiry/user
  * @description Get all enquiries raised by the logged-in user.
  * @param {Object} req - Express request object. The user's information should be stored in req.user.
  * @param {Object} res - Express response object. Will return a list of user's enquiries or an appropriate error message.

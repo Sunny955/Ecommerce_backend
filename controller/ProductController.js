@@ -16,7 +16,7 @@ const fs = require("fs");
 // for every route put v1 after api like: api/v1/product/...
 
 /**
- * @route POST api/product/create
+ * @route POST api/v1/product/create
  * @description Create a new product in the database. The title of the product is mandatory and
  * it must be non-empty. The function also generates a slug for the product based on its title.
  * @param {Object} req - Express request object. Expected to have the product details in the body.
@@ -146,7 +146,7 @@ const getAllProducts = asyncHandler(async (req, res) => {
 });
 
 /**
- * @route PUT api/product/update-product/:id
+ * @route PUT api/v1/product/update-product/:id
  * @description Administator can update a specific product's details in the database based on the provided product ID. If the request body contains a title, the function also generates and updates the product's slug.
  * @param {Object} req - Express request object. Expected to have the product ID in the params and any updated fields in the body.
  * @param {Object} res - Express response object. Will return the updated product details or an appropriate error message.
@@ -213,7 +213,7 @@ const updateProduct = asyncHandler(async (req, res) => {
 });
 
 /**
- * @route DELETE api/product/delete-product/:id
+ * @route DELETE api/v1/product/delete-product/:id
  * @description Administrator can delete a specific product from the database based on the provided product ID.
  * @param {Object} req - Express request object. Expected to have the product ID in the params.
  * @param {Object} res - Express response object. Will return the details of the deleted product or an appropriate error message.
@@ -258,7 +258,7 @@ const deleteProduct = asyncHandler(async (req, res) => {
 });
 
 /**
- * @route PUT api/product/wishlist
+ * @route PUT api/v1/product/wishlist
  * @description Add or remove a product to/from a user's wishlist based on its presence in the list.
  * If present, the product will be removed, otherwise, it will be added.
  * @param {Object} req - Express request object. Expected to have the user ID from the authentication process
@@ -325,7 +325,7 @@ const addToWishlist = asyncHandler(async (req, res) => {
 });
 
 /**
- * @route PUT api/product/rating
+ * @route PUT api/v1/product/rating
  * @description Rate a product or update an existing rating for a product.
  * If the user has already rated the product, their rating will be updated;
  * otherwise, a new rating will be added to the product.
@@ -416,7 +416,7 @@ const rating = asyncHandler(async (req, res) => {
 });
 
 /**
- * @route PUT api/product/rating/:prodId
+ * @route PUT api/v1/product/rating/:prodId
  * @description Calculate and update the average rating for a given product.
  * The average rating is determined based on all ratings for the product.
  * @param {Object} req - Express request object. Expected to have the product ID in the params.
@@ -535,7 +535,7 @@ const uploadImages = asyncHandler(async (req, res) => {
 });
 
 /**
- * @route PUT api/product/delete-image/:id
+ * @route PUT api/v1/product/delete-image/:id
  * @description Delete a specific image associated with a product from Cloudinary and update the product's image array in the database. Requires the public_id of the image to be passed in the request body.
  * @param {Object} req - Express request object, expects product ID in params and the image's public_id in the body.
  * @param {Object} res - Express response object. Returns a message indicating success or failure of the deletion process.

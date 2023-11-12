@@ -30,7 +30,7 @@ const fs = require("fs");
 // for every route put v1 after api like: api/v1/user/...
 
 /**
- * @route POST /api/user/register
+ * @route POST /api/v1/user/register
  * @description Creates a new user in the system. The function expects the 'email' field to be unique.
  * It will check if the user already exists based on the provided email, and if not, it will create
  * the user with the provided data. More comprehensive input validation should be applied, either
@@ -76,7 +76,7 @@ const createUser = asyncHandler(async (req, res) => {
 });
 
 /**
- * @route POST /api/user/login
+ * @route POST /api/v1/user/login
  * @description Authenticates the user and logs them in. The function expects email and password
  * in the request body. Upon successful authentication, it generates a refresh token for the user
  * and updates their record in the database with this token. It then sends back the user details
@@ -139,7 +139,7 @@ const loginUser = asyncHandler(async (req, res) => {
 });
 
 /**
- * @route POST /api/user/admin-login
+ * @route POST /api/v1/user/admin-login
  * @description Authenticates an admin user and provides them with a JWT token and a refresh token.
  * The function checks the email and password from the request body against the database. If authenticated,
  * the function will return some user details and a JWT token. If the user is not an admin or if authentication fails,
@@ -205,7 +205,7 @@ const loginAdmin = asyncHandler(async (req, res) => {
 });
 
 /**
- * @route GET /api/user/logout
+ * @route GET /api/v1/user/logout
  * @description Logs out the user from the system by clearing the refreshToken from both the database and the client-side cookies.
  * The function expects a refreshToken stored in the client-side cookies, which will be used to identify the user in the system.
  * The function will throw an error if the refreshToken is missing. After successfully logging out, a success message will be returned.
@@ -241,7 +241,7 @@ const logoutUser = asyncHandler(async (req, res) => {
 });
 
 /**
- * @route GET /api/user/all-users
+ * @route GET /api/v1/user/all-users
  * @description Retrieves a list of users from the system, with optional query parameters to limit the number of results and skip a certain number of entries. By default, the function will retrieve 10 users starting from the first entry. The `limit` and `skip` query parameters can be used to modify this behavior. The response will contain a success flag, the count of retrieved users, and the list of users.
  * @param {Object} req - Express request object. Optionally, may contain `limit` and `skip` in the query parameters.
  * @param {Object} res - Express response object. Returns a list of users and related data or an appropriate error message.
@@ -265,7 +265,7 @@ const getAllUsers = asyncHandler(async (req, res) => {
 });
 
 /**
- * @route GET /api/user/get-user/:id
+ * @route GET /api/v1/user/get-user/:id
  * @description Retrieves a specific user from the system based on the provided user ID in the route parameters.
  * The function will first validate the format of the MongoDB ID, and if it's incorrect, a relevant error message is returned.
  * If the user does not exist in the system, an appropriate "not found" message will be sent back to the client.
@@ -307,7 +307,7 @@ const getaUser = asyncHandler(async (req, res) => {
 });
 
 /**
- * @route GET /api/user/get-info
+ * @route GET /api/v1/user/get-info
  * @description Retrieves the details of the currently logged-in user based on the user ID extracted from the authenticated request.
  * If the user doesn't exist in the database, an appropriate "not found" message is sent back to the client.
  * The function returns select fields for the user, namely: firstname, lastname, address, wishlist, cart, pic, mobile, and email.
@@ -344,7 +344,7 @@ const getLoggedinUser = asyncHandler(async (req, res) => {
 });
 
 /**
- * @route DELETE /api/user/delete-user
+ * @route DELETE /api/v1/user/delete-user
  * @description Deletes a specific user from the system based on the provided user ID found in the authenticated user's data (from middleware, JWT, or sessions).
  * The function will first validate the MongoDB ID format, and if it's incorrect, a relevant error message is returned.
  * If the user does not exist in the system, an appropriate "not found" message will be sent back to the client.
@@ -391,7 +391,7 @@ const deleteUser = asyncHandler(async (req, res, next) => {
 });
 
 /**
- * @route GET /api/user/refresh
+ * @route GET /api/v1/user/refresh
  * @description Handles the refreshing of an access token using a refresh token stored in cookies.
  * The function expects the refresh token in the client-side cookies. If the refresh token is valid and matches a user in the system,
  * a new access token is generated and sent back to the client. Invalid or expired refresh tokens will return an appropriate error message.
@@ -428,7 +428,7 @@ const handleRefreshToken = asyncHandler(async (req, res) => {
 });
 
 /**
- * @route PUT /api/user/edit-user
+ * @route PUT /api/v1/user/edit-user
  * @description Updates a user's details in the system based on the authenticated user's ID and the provided update fields.
  * The function validates the user ID and the format of fields like the firstname, lastname, email, and mobile number.
  * Only valid updates will be processed. If any of the fields have an invalid format, an error message will be generated.
@@ -494,7 +494,7 @@ const updateUser = asyncHandler(async (req, res) => {
 });
 
 /**
- * @route PUT /api/user/block-user/:id
+ * @route PUT /api/v1/user/block-user/:id
  * @description Allows administrators to block a specific user in the system based on the provided user ID.
  * The user's `isBlocked` field will be set to `true`. The function will first validate the MongoDB ID format,
  * and if it's incorrect, a relevant error message is returned. If the user does not exist in the system,
@@ -550,7 +550,7 @@ const blockUser = asyncHandler(async (req, res) => {
 });
 
 /**
- * @route PUT /api/user/unblock-user/:id
+ * @route PUT /api/v1/user/unblock-user/:id
  * @description Allows administrators to unblock a specific user in the system based on the provided user ID.
  * The user's `isBlocked` field will be set to `false`. The function will first validate the MongoDB ID format,
  * and if it's incorrect, a relevant error message is returned. If the user does not exist in the system,
@@ -610,7 +610,7 @@ const unblockUser = asyncHandler(async (req, res) => {
 });
 
 /**
- * @route PUT /api/user/update-password
+ * @route PUT /api/v1/user/update-password
  * @description Updates the password of the authenticated user. If the user is not found or the provided password is invalid, an error message will be returned.
  * This function requires the user's ID from the request user object and the new password from the request body.
  * Upon successful update, a success message is sent in the response.
@@ -660,7 +660,7 @@ const updatePassword = asyncHandler(async (req, res) => {
 });
 
 /**
- * @route POST /api/user/forgot-password-token
+ * @route POST /api/v1/user/forgot-password-token
  * @description Generates a password reset token for a user and sends an email with a reset link.
  * If the user is not found with the provided email, an error message will be returned.
  * This function requires the user's email from the request body.
@@ -743,7 +743,7 @@ const forgotPasswordToken = asyncHandler(async (req, res) => {
 });
 
 /**
- * @route PUT /api/user/reset-password/:token
+ * @route PUT /api/v1/user/reset-password/:token
  * @description Resets the password of a user using the provided reset token. If the token is invalid or has expired, an error message will be returned.
  * The function requires the new password from the request body and the reset token from the request params.
  * Upon successful password reset, a success message is sent in the response.
@@ -808,7 +808,7 @@ const resetPassword = asyncHandler(async (req, res) => {
 });
 
 /**
- * @route GET /api/user/wishlist
+ * @route GET /api/v1/user/wishlist
  * @description Fetch the wishlist of the authenticated user.
  * The function will try to find the user by the provided user ID and then populate the 'wishlist' field.
  * @param {Object} req - Express request object. Expected to have user ID in req.user.
@@ -849,7 +849,7 @@ const getWishlist = asyncHandler(async (req, res) => {
 });
 
 /**
- * @route POST /api/user/saveAddress
+ * @route POST /api/v1/user/saveAddress
  * @description Saves or updates the user's address after verifying its existence using the MapQuest API.
  * The request body should contain an address object with fields: lane1, lane2, city, pincode, district, and country.
  * The function validates:
@@ -959,7 +959,7 @@ const saveAddress = asyncHandler(async (req, res) => {
  **/
 
 /**
- * @route POST /api/user/add-cart
+ * @route POST /api/v1/user/add-cart
  * @description Adds or updates the user's shopping cart after validating each product's existence and price.
  * The request body should contain an array of cart items, where each item has fields: _id (product ID), count, and color.
  * The function validates:
@@ -1083,7 +1083,7 @@ const userCart = asyncHandler(async (req, res) => {
 });
 
 /**
- * @route PUT /api/user/cart/update-cart
+ * @route PUT /api/v1/user/cart/update-cart
  * @description Updates the cart for a user by adding new products or updating the quantity of existing products.
  * The function uses the user's ID (from the request user object) to identify the user's cart and products
  * from the request body to update the cart. If any validation fails (like a product not being available
@@ -1193,7 +1193,7 @@ const updateUserCart = asyncHandler(async (req, res) => {
 });
 
 /**
- * @route GET /api/user/get-cart
+ * @route GET /api/v1/user/get-cart
  * @description Retrieves the user's shopping cart.
  * It populates the product details for each item in the cart using the product's ID.
  * The function validates:
@@ -1236,7 +1236,7 @@ const getUserCart = asyncHandler(async (req, res) => {
 });
 
 /**
- * @route DELETE /api/user/delete-cart
+ * @route DELETE /api/v1/user/delete-cart
  * @description Empties the user's cart by removing the associated cart from the database.
  * The function:
  *   1. Validates the MongoDB ID of the user making the request.
@@ -1300,7 +1300,7 @@ const emptyCart = asyncHandler(async (req, res) => {
 });
 
 /**
- * @route POST /api/user/cart/coupon
+ * @route POST /api/v1/user/cart/coupon
  * @description Applies a coupon to the user's cart, calculates the new total after applying the discount,
  * and updates the user's cart with this discounted total.
  * The function:
@@ -1386,7 +1386,7 @@ const applyCoupon = asyncHandler(async (req, res) => {
 });
 
 /**
- * @route POST /api/user/cart/cash-order
+ * @route POST /api/v1/user/cart/cash-order
  * @description Creates a new order for the user based on their cart. The function:
  *   1. Validates the MongoDB ID of the user making the request.
  *   2. Ensures Cash on Delivery (COD) method is provided.
@@ -1503,7 +1503,7 @@ const createOrder = asyncHandler(async (req, res) => {
 });
 
 /**
- * @route GET /api/user/order/get-orders
+ * @route GET /api/v1/user/order/get-orders
  * @description Retrieves all the orders associated with a user.
  * The function:
  *   1. Validates the MongoDB ID of the user making the request.
@@ -1560,7 +1560,7 @@ const getOrders = asyncHandler(async (req, res) => {
 });
 
 /**
- * @route GET /api/user/order/get-all-orders
+ * @route GET /api/v1/user/order/get-all-orders
  * @description Retrieves all the orders across all users in the system.
  * The function:
  *   1. Queries the database to fetch all orders.
@@ -1602,7 +1602,7 @@ const getAllOrders = asyncHandler(async (req, res) => {
 });
 
 /**
- * @route GET /api/user/order/:id
+ * @route GET /api/v1/user/order/:id
  * @description Retrieves orders specific to a user based on the provided user ID.
  * The function:
  *   1. Validates the provided MongoDB user ID.
@@ -1659,7 +1659,7 @@ const getOrderByUserId = asyncHandler(async (req, res) => {
 });
 
 /**
- * @route PUT /api/user/order/:id/status
+ * @route PUT /api/v1/user/order/:id/status
  * @description Updates the status of a specific order based on the provided order ID and status.
  * The function:
  *   1. Validates the provided MongoDB order ID.
@@ -1756,7 +1756,7 @@ const updateOrderStatus = asyncHandler(async (req, res) => {
 });
 
 /**
- * @route POST /api/user/upload/user-pic
+ * @route POST /api/v1/user/upload/user-pic
  * @description Uploads a profile picture for a user and replaces the pic field in the user model with the URL from Cloudinary.
  * @param {Object} req - Express request object. Expects the user ID in params and the image in the request files.
  * @param {Object} res - Express response object. Returns the updated user or an error message.
@@ -1827,7 +1827,7 @@ const uploadPic = asyncHandler(async (req, res) => {
 });
 
 /**
- * @route POST /api/user/delete/user-pic
+ * @route POST /api/v1/user/delete/user-pic
  * @description Deletes the profile picture of a user from Cloudinary, and resets the user's profile picture back to the default one in the database.
  * @param {Object} req - Express request object. Expects the user ID in params and the public_id of the image in the body.
  * @param {Object} res - Express response object. Returns a success message or an error message.

@@ -5,7 +5,7 @@ const { validateMongoDbId } = require("../utils/reqValidations");
 // for every route put v1 after api like: api/v1/blog-cat/...
 
 /**
- * @route POST api/blog-cat/create-cat
+ * @route POST api/v1/blog-cat/create-cat
  * @description Create a new category in the database using the data provided in the request body.
  * @param {Object} req - Express request object. Expected to have the category details in the body.
  * @param {Object} res - Express response object. Will return the newly created category's details or an appropriate error message.
@@ -41,7 +41,7 @@ const createCategory = asyncHandler(async (req, res) => {
 });
 
 /**
- * @route PUT api/blog-cat/update-cat/:id
+ * @route PUT api/v1/blog-cat/update-cat/:id
  * @description Update the details of a specific category based on the provided category ID.
  * @param {Object} req - Express request object. Expected to have the category ID in params and any updated fields in the body.
  * @param {Object} res - Express response object. Will return the updated category details or an appropriate error message.
@@ -79,7 +79,7 @@ const updateCategory = asyncHandler(async (req, res) => {
 });
 
 /**
- * @route DELETE api/blog-cat/delete-cat/:id
+ * @route DELETE api/v1/blog-cat/delete-cat/:id
  * @description Delete a specific category based on the provided category ID.
  * @param {Object} req - Express request object. Expected to have the category ID in params.
  * @param {Object} res - Express response object. Will return a success message or an appropriate error message.
@@ -118,7 +118,7 @@ const deleteCategory = asyncHandler(async (req, res) => {
 });
 
 /**
- * @route GET api/blog-cat/get-cat/:id
+ * @route GET api/v1/blog-cat/get-cat/:id
  * @description Retrieve the details of a specific category based on the provided category ID.
  * @param {Object} req - Express request object. Expected to have the category ID in params.
  * @param {Object} res - Express response object. Will return the category details or an appropriate error message.
@@ -154,7 +154,7 @@ const getCategory = asyncHandler(async (req, res) => {
 });
 
 /**
- * @route GET api/blog-cat/get-all
+ * @route GET api/v1/blog-cat/get-all
  * @description Retrieve all categories from the database.
  * @param {Object} req - Express request object.
  * @param {Object} res - Express response object. Will return a list of all categories or an appropriate error message.

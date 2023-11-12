@@ -5,7 +5,7 @@ const { validateMongoDbId } = require("../utils/reqValidations");
 // for every route put v1 after api like: api/v1/brand/...
 
 /**
- * @route POST api/brand/create-brand
+ * @route POST api/v1/brand/create-brand
  * @description Create a new brand in the database using the data provided in the request body.
  * @param {Object} req - Express request object. Expected to have the brand details in the body.
  * @param {Object} res - Express response object. Will return the newly created brand's details or an appropriate error message.
@@ -36,7 +36,7 @@ const createBrand = asyncHandler(async (req, res) => {
 });
 
 /**
- * @route PUT api/brand/update-brand/:id
+ * @route PUT api/v1/brand/update-brand/:id
  * @description Update the details of a specific brand based on the provided brand ID.
  * @param {Object} req - Express request object. Expected to have the brand ID in params and any updated fields in the body.
  * @param {Object} res - Express response object. Will return the updated brand details or an appropriate error message.
@@ -69,7 +69,7 @@ const updateBrand = asyncHandler(async (req, res) => {
 });
 
 /**
- * @route DELETE api/brand/delete-brand/:id
+ * @route DELETE api/v1/brand/delete-brand/:id
  * @description Delete a specific brand based on the provided brand ID.
  * @param {Object} req - Express request object. Expected to have the brand ID in params.
  * @param {Object} res - Express response object. Will return a success message or an appropriate error message.
@@ -101,18 +101,16 @@ const deleteBrand = asyncHandler(async (req, res) => {
       .json({ success: true, message: "Brand deleted successfully" });
   } catch (error) {
     // Handle unexpected errors
-    res
-      .status(500)
-      .json({
-        success: false,
-        message: "Error deleting brand",
-        error: error.message,
-      });
+    res.status(500).json({
+      success: false,
+      message: "Error deleting brand",
+      error: error.message,
+    });
   }
 });
 
 /**
- * @route GET api/brand/get-brand/:id
+ * @route GET api/v1/brand/get-brand/:id
  * @description Retrieve the details of a specific brand based on the provided brand ID.
  * @param {Object} req - Express request object. Expected to have the brand ID in params.
  * @param {Object} res - Express response object. Will return the brand details or an appropriate error message.
@@ -142,18 +140,16 @@ const getBrand = asyncHandler(async (req, res) => {
     res.status(200).json({ success: true, data: brand });
   } catch (error) {
     // Handle unexpected errors
-    res
-      .status(500)
-      .json({
-        success: false,
-        message: "Error retrieving brand",
-        error: error.message,
-      });
+    res.status(500).json({
+      success: false,
+      message: "Error retrieving brand",
+      error: error.message,
+    });
   }
 });
 
 /**
- * @route GET api/brand/get-all
+ * @route GET api/v1/brand/get-all
  * @description Retrieve all categories from the database.
  * @param {Object} req - Express request object.
  * @param {Object} res - Express response object. Will return a list of all categories or an appropriate error message.
@@ -168,13 +164,11 @@ const getAllBrands = asyncHandler(async (req, res) => {
     res.status(200).json({ success: true, data: brands });
   } catch (error) {
     // Handle unexpected errors
-    res
-      .status(500)
-      .json({
-        success: false,
-        message: "Error retrieving categories",
-        error: error.message,
-      });
+    res.status(500).json({
+      success: false,
+      message: "Error retrieving categories",
+      error: error.message,
+    });
   }
 });
 
