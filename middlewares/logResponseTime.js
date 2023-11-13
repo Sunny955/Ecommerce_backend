@@ -35,7 +35,7 @@ const logResponseTime = (req, res, next) => {
 const sendEmailAndClearLog = () => {
   // Set up transporter
   const transporter = nodemailer.createTransport({
-    service: "gmail", // example for Gmail, adjust for your own mail service
+    service: "smtp.gmail.com", // example for Gmail, adjust for your own mail service
     auth: {
       user: process.env.MAIL_ID,
       pass: process.env.MAIL_PASS,
