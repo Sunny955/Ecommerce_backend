@@ -29,6 +29,8 @@ const fs = require("fs");
 const createBlog = asyncHandler(async (req, res) => {
   const { title, description, category } = req.body;
 
+  const role = req?.user?.role;
+
   if (!title || !description || !category) {
     return res.status(400).json({
       success: false,
@@ -45,6 +47,11 @@ const createBlog = asyncHandler(async (req, res) => {
       return res
         .status(400)
         .json({ success: false, message: "Given category doesn't exists" });
+    }
+
+    // Defining the role of author
+    if (role) {
+      req.body.author = role;
     }
 
     // Define the written_by field as an object and set user_id
