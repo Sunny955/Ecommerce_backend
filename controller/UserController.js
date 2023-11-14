@@ -25,6 +25,7 @@ const {
   cloudinaryUploadImg,
   cloudinaryDeleteImg,
 } = require("../utils/cloudinary");
+const { sendSMSNotification, message } = require("../utils/sendSmsMessage");
 const fs = require("fs");
 
 // for every route put v1 after api like: api/v1/user/...
@@ -1495,6 +1496,11 @@ const createOrder = asyncHandler(async (req, res) => {
     userCart.cartTotal = 0;
     userCart.totalAfterDiscount = userCart.cartTotal;
     await userCart.save();
+
+    // Sending SMS to the user about their order
+    const userMobile = process.env.COUNTRY_CODE + user.mobile;
+    const orderPlacedMessage = message(newOrder._id, finalAmount);
+    await sendSMSNotification(userMobile, orderPlacedMessage);
 
     const userKey = `/api/v1/user/${userId}`;
     cache.del(userKey);
