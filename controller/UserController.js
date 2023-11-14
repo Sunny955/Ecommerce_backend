@@ -1447,7 +1447,7 @@ const createOrder = asyncHandler(async (req, res) => {
 
     if (
       couponApplied &&
-      couponApplied === false &&
+      couponApplied === "false" &&
       userCart.totalAfterDiscount !== userCart.cartTotal
     ) {
       return res.status(400).json({
