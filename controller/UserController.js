@@ -1445,6 +1445,15 @@ const createOrder = asyncHandler(async (req, res) => {
       });
     }
 
+    if (!couponApplied && userCart.totalAfterDiscount !== userCart.cartTotal) {
+      return res
+        .status(400)
+        .json({
+          success: false,
+          message: "Invalid input given please check once again",
+        });
+    }
+
     // Determine the final amount based on whether a coupon has been applied
     const finalAmount =
       couponApplied && userCart.totalAfterDiscount
