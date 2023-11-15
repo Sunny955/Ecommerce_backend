@@ -1,5 +1,9 @@
 const AWS = require("aws-sdk");
-const sns = new AWS.SNS({ region: process.env.AWS_REGION });
+const sns = new AWS.SNS({
+  region: process.env.AWS_REGION,
+  accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+  secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+});
 
 const message = (id, amount) => {
   return `Dear User, your order has been placed successfully. Order ID: ${id}, Amount: ${amount} INR. Thank you for shopping with us!`;
