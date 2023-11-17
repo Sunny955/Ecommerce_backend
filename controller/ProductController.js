@@ -192,6 +192,7 @@ const updateProduct = asyncHandler(async (req, res) => {
     // Invalidate cache after updating a product
     cache.del(keyGetAllProducts);
     cache.del(`/api/v1/product/get-a-product/${id}`);
+    cache.del(`/api/v1/product/rating/${id}`);
 
     res.status(200).json({
       success: true,
@@ -243,6 +244,7 @@ const deleteProduct = asyncHandler(async (req, res) => {
     // Invalidate cache after deleting a product
     cache.del(keyGetAllProducts);
     cache.del(`/api/v1/product/get-a-product/${id}`);
+    cache.del(`/api/v1/product/rating/${id}`);
 
     res.status(200).json({
       success: true,
@@ -307,6 +309,7 @@ const addToWishlist = asyncHandler(async (req, res) => {
     // Invalidate cache after updating a product
     cache.del(keyGetAllProducts);
     cache.del(`/api/v1/product/get-a-product/${prodId}`);
+    cache.del(`/api/v1/product/rating/${prodId}`);
 
     // Return a success response with the updated user and message
     res.json({
@@ -398,6 +401,7 @@ const rating = asyncHandler(async (req, res) => {
     // Invalidate cache after updating a product
     cache.del(keyGetAllProducts);
     cache.del(`/api/v1/product/get-a-product/${prodId}`);
+    cache.del(`/api/v1/product/rating/${id}`);
 
     // Return a success response
     res.status(200).json({
@@ -416,7 +420,7 @@ const rating = asyncHandler(async (req, res) => {
 });
 
 /**
- * @route PUT api/v1/product/rating/:prodId
+ * @route GET api/v1/product/rating/:prodId
  * @description Calculate and update the average rating for a given product.
  * The average rating is determined based on all ratings for the product.
  * @param {Object} req - Express request object. Expected to have the product ID in the params.
@@ -425,7 +429,7 @@ const rating = asyncHandler(async (req, res) => {
  * @throws {Error} Possible errors include invalid product ID, or server/database errors.
  * @returns {Object} JSON response with the product's updated details or an error message.
  */
-const updateAverageRating = asyncHandler(async (req, res) => {
+const getAverageRating = asyncHandler(async (req, res) => {
   const { prodId } = req.params;
 
   try {
@@ -458,6 +462,7 @@ const updateAverageRating = asyncHandler(async (req, res) => {
     // Invalidate cache after updating a product
     cache.del(keyGetAllProducts);
     cache.del(`/api/v1/product/get-a-product/${prodId}`);
+    cache.del(`/api/v1/product/rating/${id}`);
 
     // Return the updated product
     res.status(200).json({ success: true, data: updatedProduct });
@@ -524,6 +529,7 @@ const uploadImages = asyncHandler(async (req, res) => {
     // Invalidate cache after updating a product
     cache.del(keyGetAllProducts);
     cache.del(`/api/v1/product/get-a-product/${id}`);
+    cache.del(`/api/v1/product/rating/${id}`);
 
     res.json({ success: true, data: updatedProduct });
   } catch (error) {
@@ -585,6 +591,7 @@ const deleteImage = asyncHandler(async (req, res) => {
       // Invalidate cache after updating a product
       cache.del(keyGetAllProducts);
       cache.del(`/api/v1/product/get-a-product/${id}`);
+      cache.del(`/api/v1/product/rating/${id}`);
 
       res.json({
         success: true,
@@ -612,7 +619,7 @@ module.exports = {
   deleteProduct,
   addToWishlist,
   rating,
-  updateAverageRating,
+  getAverageRating,
   uploadImages,
   deleteImage,
 };

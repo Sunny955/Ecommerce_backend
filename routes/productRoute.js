@@ -7,7 +7,7 @@ const {
   deleteProduct,
   addToWishlist,
   rating,
-  updateAverageRating,
+  getAverageRating,
   uploadImages,
   deleteImage,
 } = require("../controller/ProductController");
@@ -67,7 +67,7 @@ router.get(
   timeoutMiddleware(10000),
   authMiddleware,
   cacheMiddleware(3600),
-  updateAverageRating
+  getAverageRating
 );
 router.put(
   "/upload-image/:id",
