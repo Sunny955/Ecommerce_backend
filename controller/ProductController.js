@@ -1,6 +1,7 @@
 const Product = require("../models/ProductModel");
 const User = require("../models/UserModel");
 const ProductCat = require("../models/ProductCategoryModel");
+const Order = require("../models/OrderModel");
 const Brand = require("../models/BrandModel");
 const asyncHandler = require("express-async-handler");
 const slugify = require("slugify");
@@ -11,6 +12,7 @@ const {
   cloudinaryUploadImg,
   cloudinaryDeleteImg,
 } = require("../utils/cloudinary");
+const { updateAverageRating } = require("../utils/updateAverageRating");
 const fs = require("fs");
 
 // for every route put v1 after api like: api/v1/product/...
@@ -364,6 +366,20 @@ const rating = asyncHandler(async (req, res) => {
       .json({ message: "Comment should be less than 5000 words" });
   }
 
+  // Check if the user has ordered the given product
+  const order = await Order.findOne({
+    "products.product": prodId,
+    orderby: _id,
+    orderStatus: "Delivered",
+  });
+
+  if (!order) {
+    return res.status(403).json({
+      success: false,
+      message: "You can only rate products you have ordered and received.",
+    });
+  }
+
   try {
     const product = await Product.findById(prodId);
 
@@ -398,6 +414,10 @@ const rating = asyncHandler(async (req, res) => {
         },
       });
     }
+
+    // Call the function to update the average rating
+    await updateAverageRating(prodId);
+
     // Invalidate cache after updating a product
     cache.del(keyGetAllProducts);
     cache.del(`/api/v1/product/get-a-product/${prodId}`);
