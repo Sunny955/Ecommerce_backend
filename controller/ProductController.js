@@ -421,7 +421,7 @@ const rating = asyncHandler(async (req, res) => {
     // Invalidate cache after updating a product
     cache.del(keyGetAllProducts);
     cache.del(`/api/v1/product/get-a-product/${prodId}`);
-    cache.del(`/api/v1/product/rating/${id}`);
+    cache.del(`/api/v1/product/rating/${prodId}`);
 
     // Return a success response
     res.status(200).json({
