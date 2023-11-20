@@ -59,7 +59,7 @@ This project presents a comprehensive backend system for a generic e-commerce pl
 - Set Cloudinary credentials in `utils/cloudinary.js`.
 - Set Nodemailer credentilas in `controller/EmailController.js`
 - Configure AWS-SDK credentials in `utils/sendSmsMessage.js`
-- Configure Mapquest API credentials in `utils\authAddress.js`
+- Configure Mapquest API credentials in `utils/authAddress.js`
 
 ### Running the Application
 
