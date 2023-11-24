@@ -24,3 +24,5 @@ API took 7510.293167ms to respond. Route: PUT /api/v1/enquiry/654e8503d698678f04
 API took 10017.647625ms to respond. Route: GET /api/v1/user/get-cart at 2023-11-15T16:02:05.244Z
 API took 7198.007792ms to respond. Route: GET /api/v1/user/get-cart at 2023-11-15T16:02:16.747Z
 API took 7388.226ms to respond. Route: POST /api/v1/user/cart/cash-order at 2023-11-15T16:02:53.108Z
+API took 10027.924125ms to respond. Route: PUT /api/v1/product/rating at 2023-11-18T16:51:54.364Z
+API took 10032.126791ms to respond. Route: PUT /api/v1/product/rating at 2023-11-18T16:52:26.712Z
