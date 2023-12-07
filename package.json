@@ -4,13 +4,17 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "start": "node index.js",
+    "start": "concurrently \"npm:elasticsearch\" \"npm:kibana\" \"npm:server\"",
+    "elasticsearch": "cd /Users/sunnyranjan/Downloads/elasticsearch-8.11.1 && ./bin/elasticsearch",
+    "kibana": "cd /Users/sunnyranjan/Downloads/kibana-8.11.1 && ./bin/kibana",
+    "prod": "node index.js",
     "server": "nodemon index.js"
   },
   "keywords": [],
   "author": "Amiya Ranjan",
   "license": "ISC",
   "dependencies": {
+    "@elastic/elasticsearch": "^8.10.0",
     "aws-sdk": "^2.1496.0",
     "axios": "^1.5.1",
     "bcrypt": "^5.1.1",
@@ -35,6 +39,7 @@
     "xss-clean": "^0.1.4"
   },
   "devDependencies": {
+    "concurrently": "^8.2.2",
     "nodemon": "^3.0.1"
   }
 }

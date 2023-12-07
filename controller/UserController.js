@@ -26,7 +26,7 @@ const {
   cloudinaryDeleteImg,
 } = require("../utils/cloudinary");
 const { sendSMSNotification, message } = require("../utils/sendSmsMessage");
-const fs = require("fs");
+const { client } = require("../config/elasticSearchConfig");
 
 // for every route put v1 after api like: api/v1/user/...
 
@@ -1478,6 +1478,18 @@ const createOrder = asyncHandler(async (req, res) => {
       orderStatus: "Processing",
     }).save();
 
+    // Index the order data in Elasticsearch
+    await client.index({
+      index: "orders",
+      id: newOrder._id,
+      body: {
+        orderby: userId,
+        orderStatus: "Processing",
+        products: userCart.products,
+        payment_details: newOrder.paymentIntent,
+      },
+    });
+
     await User.updateOne({ _id: userId }, { $push: { orders: newOrder._id } });
 
     // Update the product quantities and sales figures in the Product collection
@@ -1547,12 +1559,23 @@ const getOrders = asyncHandler(async (req, res) => {
   }
 
   try {
+    const response = await client.search({
+      index: "orders",
+      body: {
+        query: {
+          term: { orderby: userId },
+        },
+      },
+    });
+
+    const userOrders = response.hits.hits.map((hit) => hit._source);
+
     // Fetch all orders associated with the user, while populating product and user details
-    const userOrders = await Order.find({ orderby: userId })
-      .select("-__v -createdAt -updatedAt")
-      .populate("products.product", "-__v -createdAt -updatedAt")
-      .populate("orderby", "_id address firstname lastname email cart wishlist")
-      .exec();
+    // const userOrders = await Order.find({ orderby: userId })
+    //   .select("-__v -createdAt -updatedAt")
+    //   .populate("products.product", "-__v -createdAt -updatedAt")
+    //   .populate("orderby", "_id address firstname lastname email cart wishlist")
+    //   .exec();
 
     if (!userOrders || userOrders.length === 0) {
       return res.status(404).json({
@@ -1591,12 +1614,17 @@ const getOrders = asyncHandler(async (req, res) => {
  */
 const getAllOrders = asyncHandler(async (req, res) => {
   try {
-    // Fetch all orders in the system, while populating product and user details
-    const allUserOrders = await Order.find()
-      .select("-__v -createdAt -updatedAt")
-      .populate("products.product", "-__v -createdAt -updatedAt")
-      .populate("orderby", "_id address firstname lastname email cart wishlist")
-      .exec();
+    const response = await client.search({
+      index: "orders",
+      body: {
+        size: 100,
+        query: {
+          match_all: {},
+        },
+      },
+    });
+
+    const allUserOrders = response.hits.hits.map((hit) => hit._source);
 
     if (!allUserOrders || allUserOrders.length === 0) {
       return res.status(404).json({
@@ -1758,6 +1786,20 @@ const updateOrderStatus = asyncHandler(async (req, res) => {
         message: "Order not found with the specified ID.",
       });
     }
+
+    // Update order status in Elasticsearch
+    await client.update({
+      index: "orders",
+      id: updatedOrder._id.toString(),
+      body: {
+        doc: {
+          orderStatus: Status,
+          payment_details: {
+            status: paymentStatusFormatted,
+          },
+        },
+      },
+    });
 
     res.status(200).json({
       success: true,
