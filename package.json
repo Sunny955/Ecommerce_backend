@@ -1,7 +1,7 @@
 {
   "name": "e_commerce_api",
   "version": "1.0.0",
-  "description": "",
+  "description": "This is backend app for a generic e_commerce system",
   "main": "index.js",
   "scripts": {
     "start": "concurrently \"npm:elasticsearch\" \"npm:kibana\" \"npm:server\"",
